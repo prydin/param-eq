@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Peaking EQ filter coefficient calculation
-G = 3
-fc = 10000
+G = 15
+fc = 5000
 fs = 48000
-Q = 0.707
+Q = 10
+
 
 def precalc(fc, fs, Q, G):
     A=math.sqrt(10**(G/20))
@@ -17,6 +18,7 @@ def precalc(fc, fs, Q, G):
     alpha = sin_omega_c /(2*Q)
     beta = math.sqrt(A)/Q
     return A, omega_c, cos_omega_c, sin_omega_c, alpha, beta
+
 
 def peaking_filter(fc, fs, Q, G):
     A, omega_c, cos_omega_c, sin_omega_c, alpha, beta = precalc(fc, fs, Q, G)
@@ -39,8 +41,11 @@ def shelving_filter(fc, fs, Q, G, high):
     a2 = (A+1)-(A-1)*cos_omega_c - beta*sin_omega_c
     return [b0 / a0, b1 / a0, b2 / a0], [1, a1 / a0, a2 / a0]
 
-#(b, a) = peaking_filter(fc, fs, Q, G)
-(b, a) = shelving_filter(fc, fs, Q, G, high=False)
+
+(b, a) = peaking_filter(fc, fs, Q, G)
+
+
+#[b, a] = shelving_filter(fc, fs, Q, G, high=False)
 sos = scipy.signal.tf2sos(b, a)
 for section in sos:
     print(f"{section[0]:.12e}, {section[1]:.12e}, {section[2]:.12e}, {section[4]:.12e}, {section[5]:.12e},")
