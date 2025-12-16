@@ -5,9 +5,9 @@ import numpy as np
 
 # Peaking EQ filter coefficient calculation
 G = 15
-fc = 5000
+fc = 15000
 fs = 48000
-Q = 10
+Q = 1
 
 
 def precalc(fc, fs, Q, G):
@@ -42,10 +42,10 @@ def shelving_filter(fc, fs, Q, G, high):
     return [b0 / a0, b1 / a0, b2 / a0], [1, a1 / a0, a2 / a0]
 
 
-(b, a) = peaking_filter(fc, fs, Q, G)
+#(b, a) = peaking_filter(fc, fs, Q, G)
 
 
-#[b, a] = shelving_filter(fc, fs, Q, G, high=False)
+[b, a] = shelving_filter(fc, fs, Q, 1, high=False)
 sos = scipy.signal.tf2sos(b, a)
 for section in sos:
     print(f"{section[0]:.12e}, {section[1]:.12e}, {section[2]:.12e}, {section[4]:.12e}, {section[5]:.12e},")

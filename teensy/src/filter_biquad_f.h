@@ -37,10 +37,14 @@
      void setSosCoefficients(uint32_t stages, const biquad_num_t *sos) {
          __disable_irq()
          for(uint32_t i = 0; i < stages * STAGE_COEFFICIENTS; i++) {
-            coeff[i] = sos[i];
+            coeff[i] = sos[i]; 
          }
          num_stages = stages;
          __enable_irq()
+     }
+
+     const float* getCoefficients(uint32_t stage) {
+        return &coeff[stage * STAGE_COEFFICIENTS];
      }
  
      // Compute common filter functions

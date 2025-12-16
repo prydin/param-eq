@@ -38,7 +38,7 @@ void AudioFilterBiquadFloat::update(void)
             state[i * 2] = w;
             x = y;
         }
-        digitalWriteFast(LED_BUILTIN, y > 1.0 || y < -1.0 ? HIGH : LOW);
+        // digitalWriteFast(LED_BUILTIN, y > 1.0 || y < -1.0 ? HIGH : LOW);
         *data = (int16_t) (max(-1.0f, min(1.0f, min(y, 1.0f))) * 32768.0f);
     } 
     transmit(block);

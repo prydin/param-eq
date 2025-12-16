@@ -23,6 +23,9 @@
 #include <XPT2046_Touchscreen.h>
 
 #include <complex.h>
+#include <Wire.h>
+
+#include "packets.h"
 
 // Touchscreen pins
 #define XPT2046_IRQ 36  // T_IRQ
@@ -30,14 +33,6 @@
 #define XPT2046_MISO 39 // T_OUT
 #define XPT2046_CLK 25  // T_CLK
 #define XPT2046_CS 33   // T_CS
-
-/*
-#define XPT2046_IRQ 4   // T_IRQ
-#define XPT2046_MOSI 16  // T_DIN
-#define XPT2046_MISO 14  // T_OUT
-#define XPT2046_CLK 13   // T_CLK
-#define XPT2046_CS 9    // T_CS
-*/
 
 TFT_eSPI tft = TFT_eSPI(); // Create tft object
 
@@ -94,6 +89,82 @@ void updateGraph(float *x, float *y, int length)
   tr.startTrace(TFT_YELLOW);
 }
 
+float getBiquadGain(float f, float fs, float a1, float a2, float b0, float b1, float b2)
+{
+  float w = 2.0 * M_PI * f / fs;
+  std::complex<float> jw(0, w);
+  std::complex<float> numerator = b0 + b1 * exp(-jw) + b2 * exp(-2.0f * jw);
+  std::complex<float> denominator = 1.0f + a1 * exp(-jw) + a2 * exp(-2.0f * jw);
+  return log10(std::abs(numerator / denominator)) * 20.0f;
+}
+
+void updateFilterCoeffs(float *values) {
+  const int dataLength = 100;
+  float freqResponse[dataLength];
+  float freq[dataLength];
+  const float maxFreq = 20000.0f;
+  //Serial.printf("%f, %f, %f, %f, %f\n", values[4], values[5], values[1], values[2], values[3]);
+  for (int i = 1; i < dataLength; i++)
+  {
+    freq[i] = float(i) / float(dataLength) * maxFreq;
+    freqResponse[i] = getBiquadGain(freq[i], 44100.0f, values[4], values[5], values[1], values[2], values[3]);
+  }
+  updateGraph(freq, freqResponse, dataLength);
+}
+
+void updateFilterParameters(float *values) {
+  // Extract set gain, Q and frequency
+  float index = values[0];
+  int filterType = int(values[1]);
+  float gain = values[2];
+  float Q = values[3];
+  float frequency = values[4];
+  tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background 
+  tft.setTextSize(1);
+  tft.setCursor(10, 200);
+  tft.printf("Gain: %.2f dB  ", gain);
+  tft.setCursor(120, 200);
+  tft.printf("Q: %.2f", Q);
+  tft.setCursor(190, 200);
+  tft.printf("Freq: %.2f Hz  ", frequency);
+}
+
+void onReceive(int byteCount)
+{
+  char receivedData[256] = "";
+  char *ptr = receivedData;
+  while (Wire.available())
+  {
+    uint8_t c = Wire.read();
+    *ptr++ = (char)c;
+  }
+  *ptr = '\0'; // Null-terminate the string
+  //Serial.printf("Received data from DSP: %s\n", receivedData);
+  
+  // Parse comma-separaed string into 5 float values
+  float values[8];
+  int index = 0;
+  char *token = strtok(receivedData, ",");
+  while (token != NULL && index < 8)
+  {
+    values[index++] = atof(token);
+    token = strtok(NULL, ",");
+  } 
+  int packetType = (int)values[0];
+  switch(packetType)
+  {
+    case PACKET_COEFFS: // Filter parameters  update
+      updateFilterCoeffs(values+1);
+      break;
+    case PACKET_PARAMS: // Other packet types can be handled here
+      updateFilterParameters(values+1);
+      break;
+    default:
+      Serial.println("Unknown packet type received");
+      return;
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -115,71 +186,15 @@ void setup()
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(1);
   initGraph();
-}
 
-// Compute the frequency response of a biquad filter
-// length: Number of frequency points
-// fNyq: Nyquist frequency
-// a1, a2: Denomiinator coefficients
-// b0, b1, b2: Numerator coefficients
-void frequencyResponseBiquad(int length, int fs, float a1, float a2, float b0, float b1, float b2, float *response)
-{
-  for (int i = 0; i < length; i++)
-  {
-    float w = 2.0 * M_PI * (float(i) / float(length));
-    std::complex<float> jw(0, w);
-    std::complex<float> numerator = b0 + b1 * exp(-jw) + b2 * exp(-2.0f * jw);
-    std::complex<float> denominator = 1.0f + a1 * exp(-jw) + a2 * exp(-2.0f * jw);
-    std::complex<float> H = numerator / denominator;
-    Serial.print("H[");
-    Serial.print(w);
-    Serial.print("] = ");
-    Serial.println(std::abs(H));
-    response[i] = log10(std::abs(H)) * 20.0f;
-  }
+  // Initialize communication with the DSP
+  Wire.onReceive(onReceive);
+  Wire.setPins(32, 25);
+  Wire.setBufferSize(1024);
+  Wire.begin(0xb1ce);
 }
-
-float getBiquadGain(float f, float fs, float a1, float a2, float b0, float b1, float b2)
-{
-  float w = 2.0 * M_PI * f / fs;
-  std::complex<float> jw(0, w);
-  std::complex<float> numerator = b0 + b1 * exp(-jw) + b2 * exp(-2.0f * jw);
-  std::complex<float> denominator = 1.0f + a1 * exp(-jw) + a2 * exp(-2.0f * jw);
-  return log10(std::abs(numerator / denominator)) * 20.0f;
-}
-
-float phase = 0.0;
 
 void loop()
 {
-  // Your drawing/interaction code here
-  // Example data for the graph
-  const int dataLength = 100;
-
-  float b0 = 1.058592344432e+00;
-  float b1 = -1.566598405748e+00;
-  float b2 = 9.160617298456e-01;
-  float a1 = -1.566598405748e+00;
-  float a2 = 9.746540742780e-01;
-
-  float freqResponse[dataLength];
-  float freq[dataLength];
-  const float maxFreq = 20000.0f;
-  for (int i = 0; i < dataLength; i++)
-  {
-    freq[i] = float(i) / float(dataLength) * maxFreq;
-    freqResponse[i] = getBiquadGain(freq[i], 44100.0f, a1, a2, b0, b1, b2);
-  }
-  updateGraph(freq, freqResponse, dataLength);
-
-  // Print frequency response data to Serial Monitor
-  for (int i = 0; i < dataLength; i++)
-  {
-    Serial.print("Frequency: ");
-    Serial.print(freq[i]); // Frequency in Hz
-    Serial.print(" Hz, Magnitude: ");
-    Serial.print(freqResponse[i]); // Magnitude in dB
-    Serial.println(" dB");
-  }
-  delay(1000);
+  // Nothing to do here, all the work is done in the onReceive() function 
 }
