@@ -25,7 +25,8 @@
 #include <complex.h>
 #include <Wire.h>
 
-#include "packets.h"
+#include "comms.h"
+#include "netconv.h"
 
 // Touchscreen pins
 #define XPT2046_IRQ 36  // T_IRQ
@@ -44,10 +45,51 @@ TraceWidget tr = TraceWidget(&gr);
 #define MIN_GRAPH_AMPLITUDE -15.0   // Minimum amplitude for graph y axis
 #define MAX_GRAPH_AMPLITUDE 15.0    // Maximum amplitude for graph y axis
 
+#define COL_BACKGROUND 0
+#define COL_TEXT_BACKGROUND 1
+#define COL_FOREGROUND 2
+#define COL_GRID 3
+#define COL_TRACE 4
+#define COL_GRAPH_BACKGROUND 5
+#define COL_ENABLED 6
+#define COL_DISABLED 7
+#define NUM_COLORS 8
+
+#define NUM_FILTERS 3
+
+const char *filterTypes[] = {
+    "Peak",
+    "LoSh",
+    "HiSh"};
+
+uint16_t darkMode[NUM_COLORS] = {
+    TFT_BLACK,             // BACKGROUND
+    TFT_BLACK,             // TEXT_BACGROUND
+    TFT_WHITE,             // FOREGROUND
+    TFT_DARKGREEN,         // GRID
+    TFT_YELLOW,            // TRACE
+    tft.color565(5, 5, 5), //  GRAPH_BACKGROUND
+    TFT_GREEN,             // ENABLED
+    TFT_GREY               // DISABLED
+};
+
+uint16_t lightMode[NUM_COLORS] = {
+    TFT_WHITE,             // BACKGROUND
+    TFT_WHITE,             // TEXT_BACKGROUND
+    TFT_BLACK,             // FOREGROUND
+    TFT_DARKGREEN,         // GRID
+    TFT_YELLOW,            // TRACE
+    tft.color565(5, 5, 5), // GRAPH_BACKGROUND
+    TFT_GREEN,             // ENABLED
+    tft.color565(5, 5, 5)  // DISABLED
+};
+
+uint16_t *colors = darkMode;
+
 void initGraph()
 {
-  // Graph area is 200 pixels wide, 150 high, dark grey background
-  gr.createGraph(200, 150, tft.color565(5, 5, 5));
+  // Graph area is 280 pixels wide, 150 high, dark grey background
+  gr.createGraph(235, 150, tft.color565(5, 5, 5));
 
   // x scale units is from 0 to 100, y scale units is -50 to 50
   gr.setGraphScale(0, MAX_GRAPH_FREQUENCY + 1, MIN_GRAPH_AMPLITUDE, MAX_GRAPH_AMPLITUDE);
@@ -55,7 +97,7 @@ void initGraph()
   // X grid starts at 0 with lines every 10 x-scale units
   // Y grid starts at -50 with lines every 25 y-scale units
   // blue grid
-  gr.setGraphGrid(0, 4000, MIN_GRAPH_AMPLITUDE, 5.0, TFT_BLUE);
+  gr.setGraphGrid(0, 4000, MIN_GRAPH_AMPLITUDE, 5.0, colors[COL_GRID]);
 
   // Draw the x axis scale
   tft.setTextDatum(TC_DATUM); // Top centre text datum
@@ -76,20 +118,54 @@ void initGraph()
   gr.drawGraph(40, 10);
 }
 
+void updateUserSettings(int filterType, int filterIndex)
+{
+  // Update filter types
+  tft.setTextSize(2);
+  for (int i = 0; i < sizeof(filterTypes) / sizeof(filterTypes[0]); i++)
+  {
+    if (i == filterType)
+    {
+      tft.setTextColor(colors[COL_BACKGROUND], colors[COL_ENABLED]);
+    }
+    else
+    {
+      tft.setTextColor(colors[COL_BACKGROUND], colors[COL_DISABLED]);
+    }
+    tft.setCursor(10 + i * 55, 210);
+    tft.print(filterTypes[i]);
+  }
+
+  // Update filter index
+  for (int i = 0; i < NUM_FILTERS; i++)
+  {
+    if (i == filterIndex)
+    {
+      tft.setTextColor(colors[COL_BACKGROUND], colors[COL_ENABLED]);
+    }
+    else
+    {
+      tft.setTextColor(colors[COL_BACKGROUND], colors[COL_DISABLED]);
+    }
+    tft.setCursor(178 + i * 50, 210);
+    tft.printf(" %d ", i + 1);
+  }
+}
+
 void updateGraph(float *x, float *y, int length)
 {
   // Clear the previous graph by redrawing the background
   gr.drawGraph(40, 10);
+  tr.startTrace(TFT_CYAN);
 
   // Add the new line to the graph in yellow
   for (int i = 0; i < length - 1; i++)
   {
     tr.addPoint(x[i], y[i]);
   }
-  tr.startTrace(TFT_YELLOW);
 }
 
-float getBiquadGain(float f, float fs, float a1, float a2, float b0, float b1, float b2)
+float getBiquadGain(float f, float fs, float b0, float b1, float b2, float a1, float a2)
 {
   float w = 2.0 * M_PI * f / fs;
   std::complex<float> jw(0, w);
@@ -98,71 +174,39 @@ float getBiquadGain(float f, float fs, float a1, float a2, float b0, float b1, f
   return log10(std::abs(numerator / denominator)) * 20.0f;
 }
 
-void updateFilterCoeffs(float *values) {
+void updateFilterCoeffs(Packet *packet)
+{
   const int dataLength = 100;
   float freqResponse[dataLength];
   float freq[dataLength];
   const float maxFreq = 20000.0f;
-  //Serial.printf("%f, %f, %f, %f, %f\n", values[4], values[5], values[1], values[2], values[3]);
   for (int i = 1; i < dataLength; i++)
   {
     freq[i] = float(i) / float(dataLength) * maxFreq;
-    freqResponse[i] = getBiquadGain(freq[i], 44100.0f, values[4], values[5], values[1], values[2], values[3]);
+    freqResponse[i] = getBiquadGain(freq[i], 44100.0f, 
+      ntohf(packet->data.coeffs.b0), ntohf(packet->data.coeffs.b1), ntohf(packet->data.coeffs.b2),
+                                    ntohf(packet->data.coeffs.a1), ntohf(packet->data.coeffs.a2));
   }
   updateGraph(freq, freqResponse, dataLength);
 }
 
-void updateFilterParameters(float *values) {
-  // Extract set gain, Q and frequency
-  float index = values[0];
-  int filterType = int(values[1]);
-  float gain = values[2];
-  float Q = values[3];
-  float frequency = values[4];
-  tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background 
-  tft.setTextSize(1);
-  tft.setCursor(10, 200);
-  tft.printf("Gain: %.2f dB  ", gain);
-  tft.setCursor(120, 200);
-  tft.printf("Q: %.2f", Q);
-  tft.setCursor(190, 200);
-  tft.printf("Freq: %.2f Hz  ", frequency);
-}
-
-void onReceive(int byteCount)
+void updateFilterParameters(Packet *packet)
 {
-  char receivedData[256] = "";
-  char *ptr = receivedData;
-  while (Wire.available())
-  {
-    uint8_t c = Wire.read();
-    *ptr++ = (char)c;
-  }
-  *ptr = '\0'; // Null-terminate the string
-  //Serial.printf("Received data from DSP: %s\n", receivedData);
-  
-  // Parse comma-separaed string into 5 float values
-  float values[8];
-  int index = 0;
-  char *token = strtok(receivedData, ",");
-  while (token != NULL && index < 8)
-  {
-    values[index++] = atof(token);
-    token = strtok(NULL, ",");
-  } 
-  int packetType = (int)values[0];
-  switch(packetType)
-  {
-    case PACKET_COEFFS: // Filter parameters  update
-      updateFilterCoeffs(values+1);
-      break;
-    case PACKET_PARAMS: // Other packet types can be handled here
-      updateFilterParameters(values+1);
-      break;
-    default:
-      Serial.println("Unknown packet type received");
-      return;
-  }
+  // Extract set gain, Q and frequency
+  float index = packet->data.params.filterIndex;
+  int filterType = int(packet->data.params.filterType);
+  float gain = ntohf(packet->data.params.gain);
+  float Q = ntohf(packet->data.params.Q);
+  float frequency = ntohf(packet->data.params.frequency);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background
+  tft.setTextSize(1);
+  tft.setCursor(10, 180);
+  tft.printf("Gain: %.2f dB  ", gain);
+  tft.setCursor(120, 180);
+  tft.printf("Q: %.2f", Q);
+  tft.setCursor(190, 180);
+  tft.printf("Freq: %.2f Hz  ", frequency);
+  updateUserSettings(filterType, int(index));
 }
 
 void setup()
@@ -186,15 +230,32 @@ void setup()
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(1);
   initGraph();
+  updateUserSettings(0, 0);
 
   // Initialize communication with the DSP
-  Wire.onReceive(onReceive);
   Wire.setPins(32, 25);
   Wire.setBufferSize(1024);
+  Wire.onReceive(readPacketFromI2C);
   Wire.begin(0xb1ce);
 }
 
 void loop()
 {
-  // Nothing to do here, all the work is done in the onReceive() function 
+  Packet *packet = popPacket();
+  if (packet == NULL)
+  {
+    return;
+  }
+  switch (packet->packetType)
+  {
+  case PACKET_COEFFS: // Filter parameters  update
+    updateFilterCoeffs(packet);
+    break;
+  case PACKET_PARAMS: // Other packet types can be handled here
+    updateFilterParameters(packet);
+    break;
+  default:
+    Serial.println("Unknown packet type received");
+    return;
+  }
 }
