@@ -10,10 +10,23 @@
 #define PACKET_QUEUE_SIZE 10
 
 Packet packetQueue[PACKET_QUEUE_SIZE];
-volatile int queueHead = 0;
-volatile int queueTail = 0;
+volatile uint32_t queueHead = 0;
+volatile uint32_t queueTail = 0;
 
 
+/**
+ * @brief Removes and returns the oldest packet from the packet queue.
+ * 
+ * This function retrieves the packet at the head of the circular queue in a
+ * thread-safe manner by disabling interrupts during the operation. After
+ * retrieving the packet, it advances the head pointer and re-enables interrupts.
+ * 
+ * @return Packet* Pointer to the oldest packet in the queue, or nullptr if the queue is empty.
+ * 
+ * @note This function disables interrupts temporarily to ensure atomic access to the queue.
+ * @note The returned pointer points to a buffer that may be reused when the queue wraps around.
+ * @warning The caller should process or copy the packet data before it gets overwritten.
+ */
 Packet *popPacket()
 {
     noInterrupts();
@@ -23,14 +36,43 @@ Packet *popPacket()
         return nullptr; // Queue empty
     }
     Packet *packet = &(packetQueue[queueHead]);
-    queueTail = (queueTail - 1) % PACKET_QUEUE_SIZE;
+    queueHead = (queueHead + 1) % PACKET_QUEUE_SIZE;
     interrupts();
     return packet;
 }
 
-void readPacketFromI2C(int numBytes) // Must be called from ISR
+/**
+ * @brief Processes an incoming I2C packet and adds it to the packet queue.
+ * 
+ * This function must be called from an ISR context. It reads data from the I2C Wire
+ * interface, validates the packet size and checksum, and adds it to a circular queue.
+ * 
+ * @param numBytes The number of bytes available to read from the I2C buffer
+ * 
+ * @note This function performs the following validations:
+ *       - Checks for queue overflow before adding the packet
+ *       - Verifies that the complete packet was received (exact size match)
+ *       - Validates the CRC32 checksum of the received packet
+ * 
+ * @warning Must be called from ISR context only
+ * @warning If packet validation fails (incomplete, too large, or invalid checksum),
+ *          the packet is discarded and not added to the queue
+ * 
+ * @see Packet
+ * @see PACKET_QUEUE_SIZE
+ * @see crc32Buffer
+ */
+void processIncomingPacket(int numBytes) // Must be called from ISR
 {
-    Packet *packet = &(packetQueue[queueHead]);
+    Serial.printf("Push Packet: head=%d, tail=%d\n", queueHead, queueTail);
+    int nextTail = (queueTail + 1) % PACKET_QUEUE_SIZE;
+    if (nextTail == queueHead)
+    {
+        Serial.println("Packet queue overflow");
+        return;
+    }
+
+    Packet *packet = &(packetQueue[queueTail]);
     uint8_t *ptr = (uint8_t *)packet;
     size_t bytesRead = 0;
     while (Wire.available() && bytesRead < numBytes)
@@ -48,16 +90,10 @@ void readPacketFromI2C(int numBytes) // Must be called from ISR
         Wire.flush(); // Clear remaining bytes
         return;
     }   
-    if (crc32Buffer((uint8_t*) &packet->data, sizeof(packet->data) - 4) != ntohl(packet->checksum))
+    uint32_t checksum = crc32Buffer((uint8_t*) packet, sizeof(Packet) - 4);
+    if (checksum != ntohl(packet->checksum))
     {
-        Serial.println("Invalid packet checksum");
-    }
-
-    int nextTail = (queueTail + 1) % PACKET_QUEUE_SIZE;
-    if (nextTail == queueHead)
-    {
-        Serial.println("Packet queue overflow");
-        return;
+        Serial.printf("Invalid packet checksum. Expected 0x%08X, got 0x%08X, size %d\n", ntohl(packet->checksum), checksum, sizeof(Packet));
     }
     queueTail = nextTail;
 }

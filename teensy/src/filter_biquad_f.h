@@ -10,6 +10,9 @@
  #define STAGE_COEFFICIENTS 5
 
  typedef float biquad_num_t;
+
+ // Flat filter with unity gain. 
+ static const biquad_num_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
  
  class AudioFilterBiquadFloat : public AudioStream
  {
@@ -44,7 +47,8 @@
      }
 
      const float* getCoefficients(uint32_t stage) {
-        return &coeff[stage * STAGE_COEFFICIENTS];
+        // Return identity filter if stage isn't active
+        return stage < num_stages ? &coeff[stage * STAGE_COEFFICIENTS] : identityCoefficients;
      }
  
      // Compute common filter functions
@@ -146,26 +150,6 @@
      }
 
      void setPeakingEQ(uint32_t stage, biquad_num_t frequency, biquad_num_t q, biquad_num_t gain) {
-        /*
-  A=math.sqrt(10**(G/20))
-    omega_c = 2*math.pi*fc/fs
-    cos_omega_c = math.cos(omega_c)
-    sin_omega_c = math.sin(omega_c)
-    alpha = sin_omega_c /(2*Q)
-    beta = math.sqrt(A)/Q
-
-          A, omega_c, cos_omega_c, sin_omega_c, alpha, beta = precalc(fc, fs, Q, G)
-    b0 = 1 + alpha*A
-    b1 = -2*cos_omega_c
-    b2 = 1 - alpha*A
-    a0 = 1 + alpha/A
-    a1 = -2*cos_omega_c
-    a2 = 1 - alpha/A
-    return [b0/a0, b1/a0, b2/a0], [1, a1/a0, a2/a0]
-
-        
-        */
-       //Serial.printf("setPeakingEQ: stage=%d, freq=%f, q=%f, gain=%f\n", stage, frequency, q, gain);
          biquad_num_t coef[STAGE_COEFFICIENTS];
          biquad_num_t a = pow(10.0, gain/40.0f);
          biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);

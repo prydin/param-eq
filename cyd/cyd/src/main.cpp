@@ -57,10 +57,12 @@ TraceWidget tr = TraceWidget(&gr);
 
 #define NUM_FILTERS 3
 
+#define SAMPLE_FREQ 44100.0f
+
 const char *filterTypes[] = {
-    "Peak",
     "LoSh",
-    "HiSh"};
+    "HiSh",
+    "Peak"};
 
 uint16_t darkMode[NUM_COLORS] = {
     TFT_BLACK,             // BACKGROUND
@@ -180,12 +182,46 @@ void updateFilterCoeffs(Packet *packet)
   float freqResponse[dataLength];
   float freq[dataLength];
   const float maxFreq = 20000.0f;
+
+  // Extract filter coefficients into variables
+  for(int i = 0; i< FILTER_BANDS; i++)
+  {
+    float b0 = ntohf(packet->data.coeffs[i].b0);
+    float b1 = ntohf(packet->data.coeffs[i].b1);
+    float b2 = ntohf(packet->data.coeffs[i].b2);
+    float a1 = ntohf(packet->data.coeffs[i].a1);
+    float a2 = ntohf(packet->data.coeffs[i].a2);
+    Serial.printf("Band %d Coefficients: b0=0x%08X, b1=0x%08X, b2=0x%08X, a1=0x%08X, a2=0x%08X\n", i, b0, b1, b2, a1, a2);
+    }
+
   for (int i = 1; i < dataLength; i++)
   {
     freq[i] = float(i) / float(dataLength) * maxFreq;
-    freqResponse[i] = getBiquadGain(freq[i], 44100.0f, 
-      ntohf(packet->data.coeffs.b0), ntohf(packet->data.coeffs.b1), ntohf(packet->data.coeffs.b2),
-                                    ntohf(packet->data.coeffs.a1), ntohf(packet->data.coeffs.a2));
+
+    // Initialize frequency response
+    if(packet->displayMode == DISPLAY_MODE_COMBINED)
+    {
+      freqResponse[i] = 0.0f;
+      for(int j = 0; j < FILTER_BANDS; j++)
+      {
+        float b0 = ntohf(packet->data.coeffs[j].b0);
+        float b1 = ntohf(packet->data.coeffs[j].b1);
+        float b2 = ntohf(packet->data.coeffs[j].b2);
+        float a1 = ntohf(packet->data.coeffs[j].a1);
+        float a2 = ntohf(packet->data.coeffs[j].a2);  
+        freqResponse[i] += getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
+      }
+    }
+    else
+    {
+      int index = packet->selectedFilterBand;
+      float b0 = ntohf(packet->data.coeffs[index].b0);
+      float b1 = ntohf(packet->data.coeffs[index].b1);
+      float b2 = ntohf(packet->data.coeffs[index].b2);
+      float a1 = ntohf(packet->data.coeffs[index].a1);
+      float a2 = ntohf(packet->data.coeffs[index].a2);  
+      freqResponse[i] = getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
+    }
   }
   updateGraph(freq, freqResponse, dataLength);
 }
@@ -193,11 +229,11 @@ void updateFilterCoeffs(Packet *packet)
 void updateFilterParameters(Packet *packet)
 {
   // Extract set gain, Q and frequency
-  float index = packet->data.params.filterIndex;
-  int filterType = int(packet->data.params.filterType);
-  float gain = ntohf(packet->data.params.gain);
-  float Q = ntohf(packet->data.params.Q);
-  float frequency = ntohf(packet->data.params.frequency);
+  int index = packet->selectedFilterBand;
+  int filterType = int(packet->data.params[index].filterType);
+  float gain = ntohf(packet->data.params[index].gain);
+  float Q = ntohf(packet->data.params[index].Q);
+  float frequency = ntohf(packet->data.params[index].frequency);
   tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background
   tft.setTextSize(1);
   tft.setCursor(10, 180);
@@ -235,7 +271,7 @@ void setup()
   // Initialize communication with the DSP
   Wire.setPins(32, 25);
   Wire.setBufferSize(1024);
-  Wire.onReceive(readPacketFromI2C);
+  Wire.onReceive(processIncomingPacket);
   Wire.begin(0xb1ce);
 }
 
@@ -248,10 +284,10 @@ void loop()
   }
   switch (packet->packetType)
   {
-  case PACKET_COEFFS: // Filter parameters  update
+  case PACKET_COEFFS: 
     updateFilterCoeffs(packet);
     break;
-  case PACKET_PARAMS: // Other packet types can be handled here
+  case PACKET_PARAMS: 
     updateFilterParameters(packet);
     break;
   default:

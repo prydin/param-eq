@@ -4,6 +4,6 @@
 #include "../../../teensy/src/packets.h"
 
 Packet *popPacket();
-void readPacketFromI2C(int numBytes);
+void processIncomingPacket(int numBytes);
 
 #endif

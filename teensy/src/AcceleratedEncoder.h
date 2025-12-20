@@ -46,6 +46,8 @@ public:
                 acceleration = 1;   // Slow
             }
             
+            Serial.printf("TimeDiff: %lu ms, Acceleration: %d\n", timeDiff, acceleration);
+
             // Compute and update the new accelerated position  
             int delta = newPos - lastPosition;
             int newAcceleratedPosition = acceleratedPosition +  delta * acceleration;
@@ -56,8 +58,8 @@ public:
 
 
 private:
+    int minValue;
+    int maxValue;
     int lastPosition;
     int acceleratedPosition;
-    int maxValue;
-    int minValue;
 };  

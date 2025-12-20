@@ -1,4 +1,4 @@
-/**
+  /**
  * @file    netconv.cpp
  * @brief   Implementation file for the netconv library
  * @author  Andreas Grommek
