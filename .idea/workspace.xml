@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8f2a06c9-747f-4794-ac64-a5d40c63dfb5" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cyd/cyd/platformio.ini" beforeDir="false" afterPath="$PROJECT_DIR$/cyd/cyd/platformio.ini" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cyd/cyd/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/cyd/cyd/src/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/synthesize.py" beforeDir="false" afterPath="$PROJECT_DIR$/synthesize.py" afterDir="false" />

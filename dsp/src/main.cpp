@@ -23,9 +23,9 @@
 #include <OneButton.h>
 #include <ErriezCRC32.h>
 #include <stdlib.h>
-#include "filter.h"
+#include "../../common/filter.h"
+#include "../../common/packets.h"
 #include "filter_biquad_f.h"
-#include "packets.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
@@ -365,10 +365,6 @@ void loop(void)
         persistedSettings.filterSettings[i] = filterSettings[i];
       }
       saveSettings(persistedSettings);
-      PersistedSettings testSettings;
-      loadSettings(testSettings);
-      Serial.printf("Test loaded settings: filter[0].frequency=%.2f\n", testSettings.filterSettings[0].frequency);
-
       lastSaveTime = currentTime;
       Serial.println("Settings saved to EEPROM.");
       saveNeeded = false;

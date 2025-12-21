@@ -27,7 +27,7 @@
 
 #include "comms.h"
 #include "netconv.h"
-#include "../../../teensy/src/filter.h"
+#include "../../common/filter.h"
 
 // Touchscreen pins
 #define XPT2046_IRQ 36  // T_IRQ

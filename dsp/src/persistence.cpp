@@ -6,30 +6,7 @@
 #define EEPROM_MAGIC (0x50455145) // 'PEQE' in ASCII
 #define EEPROM_VERSION 2
 #define EEPROM_START_ADDR 0
-
-/**
- * @brief Calculates a simple checksum for the persisted settings data.
- * 
- * This function computes a checksum by summing all bytes in the PersistedSettings
- * structure, excluding the checksum field itself. The checksum is used to verify
- * data integrity when loading settings from persistent storage.
- * 
- * @param data The PersistedSettings structure to calculate the checksum for.
- * @return uint32_t The calculated checksum value (sum of all bytes excluding the checksum field).
- * 
- * @note The checksum field is assumed to be the last field in the PersistedSettings structure.
- * @note This is a simple additive checksum and may not detect all forms of data corruption.
- */
-uint32_t calculateChecksum(const PersistedSettings& data) {
-    uint32_t sum = 0;
-    const uint8_t* ptr = (const uint8_t*)&data;
-    size_t size = sizeof(PersistedSettings) - sizeof(uint32_t); // Exclude checksum itself
-    for (size_t i = 0; i < size; i++) {
-        sum += ptr[i];
-    }
-    return sum;
-}
-
+ 
 /**
  * @brief Saves settings to EEPROM with integrity checks.
  * 

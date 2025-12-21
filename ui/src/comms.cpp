@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <ErriezCRC32.h>
 #include <netconv.h>
-#include "../../../teensy/src/packets.h"
+#include "../../common/packets.h"
 #include "netconv.h"
 
 #define PACKET_QUEUE_SIZE 10

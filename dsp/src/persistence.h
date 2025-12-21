@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "filter.h"
+#include "../../common/filter.h"
 
 // A a struct of all user settings that need to be persisted
 struct PersistedSettings
