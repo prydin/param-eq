@@ -2,6 +2,8 @@
 
 ## Introduction
 This is (at least so far) just a playground for my experiments with digital parametric equalizers. 
+![UI](images/ui.png)
+![UI](images/ratsnest.png)
 
 ### The DSP module
 This repo contains a (mostly) working prototype of a three band digital equalizer based on a Teensy 4.1
