@@ -20,6 +20,7 @@ public:
         if (acceleratedPosition > maxValue) {
             acceleratedPosition = maxValue;
         }
+        lastPosition = getPosition(); // Avoid spurious movements
     }
 
     int geAcceleratedPosition() const {
@@ -47,6 +48,7 @@ public:
             }
             
             Serial.printf("TimeDiff: %lu ms, Acceleration: %d\n", timeDiff, acceleration);
+            Serial.printf("NewPos: %d, LastPos: %d\n", newPos, lastPosition);
 
             // Compute and update the new accelerated position  
             int delta = newPos - lastPosition;

@@ -4,7 +4,7 @@
 
 // EEPROM layout constants
 #define EEPROM_MAGIC (0x50455145) // 'PEQE' in ASCII
-#define EEPROM_VERSION 1
+#define EEPROM_VERSION 2
 #define EEPROM_START_ADDR 0
 
 /**
@@ -47,7 +47,8 @@ bool saveSettings(const PersistedSettings settings) {
     data.magic = EEPROM_MAGIC;
     data.version = EEPROM_VERSION;
     data.checksum = crc32Buffer(&data, sizeof(PersistedSettings) - sizeof(uint32_t));
-    
+    //Dump data to serial for debugging
+    Serial.printf("Saving settings: magic=0x%08X, version=%d, checksum=0x%08X, filter[0].frequency=%.2f\n", data.magic, data.version, data.checksum, data.filterSettings[0].frequency);
     EEPROM.put(EEPROM_START_ADDR, data);
     return true;
 }
@@ -88,6 +89,7 @@ bool loadSettings(PersistedSettings& settings) {
     }
     
     settings = data;
+    Serial.printf("Loaded settings: magic=0x%08X, version=%d, checksum=0x%08X, filter[0].frequency=%.2f\n", data.magic, data.version, data.checksum, data.filterSettings[0].frequency);
     return true;
 }
 

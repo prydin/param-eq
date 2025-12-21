@@ -27,6 +27,7 @@
 
 #include "comms.h"
 #include "netconv.h"
+#include "../../../teensy/src/filter.h"
 
 // Touchscreen pins
 #define XPT2046_IRQ 36  // T_IRQ
@@ -120,7 +121,7 @@ void initGraph()
   gr.drawGraph(40, 10);
 }
 
-void updateUserSettings(int filterType, int filterIndex)
+void updateUserSettings(int filterType, int filterIndex, int displayMode)
 {
   // Update filter types
   tft.setTextSize(2);
@@ -152,6 +153,19 @@ void updateUserSettings(int filterType, int filterIndex)
     tft.setCursor(178 + i * 50, 210);
     tft.printf(" %d ", i + 1);
   }
+
+  // Update dislay mode
+  if (displayMode == DISPLAY_MODE_COMBINED)
+  {
+    tft.setTextColor(colors[COL_BACKGROUND], colors[COL_ENABLED]);
+  }
+  else
+  {
+    tft.setTextColor(colors[COL_BACKGROUND], colors[COL_DISABLED]);
+  }
+
+  tft.setCursor(280, 10);
+  tft.print("SUM");
 }
 
 void updateGraph(float *x, float *y, int length)
@@ -191,7 +205,7 @@ void updateFilterCoeffs(Packet *packet)
     float b2 = ntohf(packet->data.coeffs[i].b2);
     float a1 = ntohf(packet->data.coeffs[i].a1);
     float a2 = ntohf(packet->data.coeffs[i].a2);
-    Serial.printf("Band %d Coefficients: b0=0x%08X, b1=0x%08X, b2=0x%08X, a1=0x%08X, a2=0x%08X\n", i, b0, b1, b2, a1, a2);
+    Serial.printf("Band %d Coefficients: b0=%f, b1=%f, b2=%f, a1=%f, a2=%f\n", i, b0, b1, b2, a1, a2);
     }
 
   for (int i = 1; i < dataLength; i++)
@@ -210,6 +224,7 @@ void updateFilterCoeffs(Packet *packet)
         float a1 = ntohf(packet->data.coeffs[j].a1);
         float a2 = ntohf(packet->data.coeffs[j].a2);  
         freqResponse[i] += getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
+        // Serial.printf("Freq: %.2f Hz, Band %d Gain: %.2f dB\n", freq[i], j, getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2));
       }
     }
     else
@@ -242,7 +257,7 @@ void updateFilterParameters(Packet *packet)
   tft.printf("Q: %.2f", Q);
   tft.setCursor(190, 180);
   tft.printf("Freq: %.2f Hz  ", frequency);
-  updateUserSettings(filterType, int(index));
+  updateUserSettings(filterType, int(index), packet->displayMode);
 }
 
 void setup()
@@ -266,7 +281,7 @@ void setup()
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(1);
   initGraph();
-  updateUserSettings(0, 0);
+  updateUserSettings(0, 0, DISPLAY_MODE_INDIVIDUAL);
 
   // Initialize communication with the DSP
   Wire.setPins(32, 25);

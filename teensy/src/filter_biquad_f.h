@@ -168,6 +168,10 @@
          setCoefficients(stage, coef);
      }
 
+     void bypass(uint32_t stage) {
+        setCoefficients(stage, identityCoefficients);
+    }
+
  //private:
      biquad_num_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
      biquad_num_t state[2 * MAX_BIQUAD_STAGES];

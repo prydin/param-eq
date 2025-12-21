@@ -13,6 +13,9 @@
 #define LOWSHELF 0
 #define HIGHSHELF 1
 #define PEAKINGEQ 2
+#define BYPASS 3
+#define NUM_FILTER_TYPES 4
+
 
 // Struct represeting filter settings
 struct FilterSettings {

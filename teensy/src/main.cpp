@@ -39,7 +39,7 @@
 #define Q_STEP 0.1f
 #define MIN_FREQUENCY 20.0f
 #define MAX_FREQUENCY 20000.0f
-#define FREQ_STEP 5.0f
+#define FREQ_STEP 20.0f
 
 // Rotary encoder pins
 #define FC_PIN_A 33
@@ -48,9 +48,9 @@
 #define GAIN_PIN_A 36
 #define GAIN_PIN_B 37
 #define FILTER_INDEX_PIN 38
-
 #define Q_PIN_A 39
 #define Q_PIN_B 40
+#define FILTER_MODE_PIN 41
 
 // Settings save interval
 #define SAVE_INTERVAL_MS 5000
@@ -63,6 +63,7 @@ AcceleratedEncoder qSelector(Q_PIN_A, Q_PIN_B);
 // Pushbuttons
 OneButton filterSelectButton(FILTER_INDEX_PIN, true);
 OneButton filterTypeSelectButton(FILTER_TYPE_PIN, true);
+OneButton displayModeButton(FILTER_MODE_PIN, true);
 
 AudioSynthWaveform waveform;
 
@@ -84,8 +85,9 @@ AudioConnection patchCord3(mixer2, 0, i2s, 1);
 AudioConnection patchCord4(mixer1, 0, i2s, 0);
 
 // User settings
-volatile FilterSettings filterSettings[FILTER_BANDS];
+FilterSettings filterSettings[FILTER_BANDS];
 int selectedFilterBand = LOW_BAND;
+int displayMode = DISPLAY_MODE_INDIVIDUAL;
 
 // Last time settings were saved to EEPROM
 unsigned long lastSaveTime = 0;
@@ -133,32 +135,67 @@ void sendToDisplay(Packet *packet)
 void updateDisplay()
 {
   // Create packet with coefficients
-  const float *coeffs = filterLeft.getCoefficients(selectedFilterBand);
   Packet packet = {};
   packet.packetType = PACKET_COEFFS;
   packet.selectedFilterBand = selectedFilterBand;
-  for(int i = 0; i< FILTER_BANDS; i++) {
-    packet.data.coeffs[selectedFilterBand].b0 = htonf(coeffs[0]);
-    packet.data.coeffs[selectedFilterBand].b1 = htonf(coeffs[1]);
-    packet.data.coeffs[selectedFilterBand].b2 = htonf(coeffs[2]);
-    packet.data.coeffs[selectedFilterBand].a1 = htonf(coeffs[3]);
-    packet.data.coeffs[selectedFilterBand].a2 = htonf(coeffs[4]);
+  packet.displayMode = displayMode;
+  for (int i = 0; i < FILTER_BANDS; i++)
+  {
+    const float *coeffs = filterLeft.getCoefficients(i);
+    packet.data.coeffs[i].b0 = htonf(coeffs[0]);
+    packet.data.coeffs[i].b1 = htonf(coeffs[1]);
+    packet.data.coeffs[i].b2 = htonf(coeffs[2]);
+    packet.data.coeffs[i].a1 = htonf(coeffs[3]);
+    packet.data.coeffs[i].a2 = htonf(coeffs[4]);
   }
   sendToDisplay(&packet);
 
   // Send filter parameters to display
-  volatile FilterSettings *settings = &filterSettings[selectedFilterBand];
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
   packet = {};
   packet.packetType = PACKET_PARAMS;
   packet.selectedFilterBand = selectedFilterBand;
-  for(int i = 0; i< FILTER_BANDS; i++) {
+  packet.displayMode = displayMode;
+  for (int i = 0; i < FILTER_BANDS; i++)
+  {
     packet.selectedFilterBand = selectedFilterBand;
-    packet.data.params[selectedFilterBand].filterType = settings->type;
-    packet.data.params[selectedFilterBand].frequency = htonf(settings->frequency);
-    packet.data.params[selectedFilterBand].Q = htonf(settings->Q);
-    packet.data.params[selectedFilterBand].gain = htonf(settings->gain);
+    packet.data.params[i].filterType = settings->type;
+    packet.data.params[i].frequency = htonf(settings->frequency);
+    packet.data.params[i].Q = htonf(settings->Q);
+    packet.data.params[i].gain = htonf(settings->gain);
   }
   sendToDisplay(&packet);
+}
+
+void updateSelectedFilter(int selected)
+{
+  FilterSettings *settings = &filterSettings[selected];
+  switch (settings->type)
+  {
+  case LOWSHELF:
+    filterLeft.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    filterRight.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    break;
+  case HIGHSHELF:
+    filterLeft.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    filterRight.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    break;
+  case PEAKINGEQ:
+    filterLeft.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
+    filterRight.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
+    break;
+  case BYPASS:
+    filterLeft.bypass(selectedFilterBand);
+    filterRight.bypass(selectedFilterBand);
+  }
+}
+
+void updateAllFilters()
+{
+  for (int i = 0; i < FILTER_BANDS; i++)
+  {
+    updateSelectedFilter(i);
+  }
 }
 
 /**
@@ -197,33 +234,25 @@ void setup(void)
   pinMode(Q_PIN_A, INPUT);
   pinMode(Q_PIN_B, INPUT);
 
-  // Set initial positions
-  fcSelector.setAcceleratedPosition(0);
-  fcSelector.setEndpoints(MIN_FREQUENCY / FREQ_STEP, MAX_FREQUENCY / FREQ_STEP);
-  fcSelector.setAcceleratedPosition(1000 / FREQ_STEP); // Start at 1 kHz
-  gainSelector.setPosition(PEAKINGEQ);
-  gainSelector.setEndpoints(MIN_GAIN_DB / GAIN_STEP_DB, MAX_GAIN_DB / GAIN_STEP_DB);
-  gainSelector.setAcceleratedPosition(0); // Start at 0 dB
-  qSelector.setPosition(707 / Q_STEP);    // Q=0.707
-  qSelector.setEndpoints(MIN_Q / Q_STEP, MAX_Q / Q_STEP);
-
   // Set up pushbuttons
   filterTypeSelectButton.attachPress([]()
-                                     {
-    filterSettings[selectedFilterBand].type = (filterSettings[selectedFilterBand].type + 1) % 3;
+                                     { filterSettings[selectedFilterBand].type = (filterSettings[selectedFilterBand].type + 1) % NUM_FILTER_TYPES;
     Serial.printf("Selected filter type: %d\n", filterSettings[selectedFilterBand].type); });
 
-    filterSelectButton.attachPress([]()
-                                     {  
-    selectedFilterBand = (selectedFilterBand + 1) % FILTER_BANDS;
-    Serial.printf("Selected filter band: %d\n", selectedFilterBand); });
-                                  
+  filterSelectButton.attachPress([]()
+                                 {  selectedFilterBand = (selectedFilterBand + 1) % FILTER_BANDS;
+  Serial.printf("Selected filter band: %d\n", selectedFilterBand); });
+
+  displayModeButton.attachPress([]()
+                                { displayMode = (displayMode + 1) % 2;
+    Serial.printf("Selected display mode: %d\n", displayMode); });
+
   // Initialize S2C
   Wire.begin();
 
   // Set up Q control on A10
   pinMode(A10, INPUT);
-  pinMode(A11, INPUT);
+  pinMode(A11, INPUT); 
   pinMode(A12, INPUT);
   pinMode(10, OUTPUT);
   digitalWrite(10, HIGH); // Chip select high
@@ -231,11 +260,45 @@ void setup(void)
   mixer1.gain(0, 0.5); // Left channel
   mixer2.gain(0, 0.5); // Right channel
 
-  // Initial display update
-  updateDisplay();
-
   // Reset last save time
   lastSaveTime = millis();
+
+  // Load persisted settings
+  PersistedSettings persistedSettings;
+  if (loadSettings(persistedSettings))
+  {
+    for (int i = 0; i < FILTER_BANDS; i++)
+    {
+      filterSettings[i] = persistedSettings.filterSettings[i];
+    }
+    Serial.println("Loaded persisted settings from EEPROM.");
+  }
+  else
+  {
+    // Initialize default settings
+    Serial.println("No persisted settings found, using defaults.");
+    for (int i = 0; i < FILTER_BANDS; i++)
+    {
+      filterSettings[i].frequency = 1234.0f; // 1 kHz
+      filterSettings[i].Q = 0.707f;          // Q=0.707
+      filterSettings[i].gain = 0.0f;         // 0 dB
+      filterSettings[i].type = BYPASS;       // Bypass
+    }
+  }
+
+  // Set initial positions
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
+  selectedFilterBand = 0;
+  fcSelector.setAcceleratedPosition(settings->frequency / FREQ_STEP);
+  fcSelector.setEndpoints(MIN_FREQUENCY / FREQ_STEP, MAX_FREQUENCY / FREQ_STEP);
+  gainSelector.setAcceleratedPosition(settings->gain / GAIN_STEP_DB);
+  gainSelector.setEndpoints(MIN_GAIN_DB / GAIN_STEP_DB, MAX_GAIN_DB / GAIN_STEP_DB);
+  qSelector.setAcceleratedPosition(settings->Q / Q_STEP);
+  qSelector.setEndpoints(MIN_Q / Q_STEP, MAX_Q / Q_STEP);
+
+  // Initial display update
+  updateAllFilters();
+  updateDisplay();
 }
 
 /**
@@ -253,18 +316,21 @@ void setup(void)
  * - LOWSHELF: Low shelf filter with configurable frequency, gain, and Q
  * - HIGHSHELF: High shelf filter with configurable frequency, gain, and Q
  * - PEAKINGEQ: Peaking EQ filter with configurable frequency, Q, and gain
+ * - BYPASS: Bypass filter (no effect)
  */
 void loop(void)
 {
   // Tick rotary encoders
-  volatile FilterSettings *settings = &filterSettings[selectedFilterBand];
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
   int oldFilterType = settings->type;
   int oldSelectedBand = selectedFilterBand;
+  int oldDisplayMode = displayMode;
   fcSelector.tick();
   gainSelector.tick();
   qSelector.tick();
   filterTypeSelectButton.tick(); // May change selectedFilterType!
   filterSelectButton.tick();     // May change selectedFilterBand!
+  displayModeButton.tick();      // May change displayMode!
 
   // If the filter band changed, we have to update all the rotary encoders to reflect current settings
   if (oldSelectedBand != selectedFilterBand)
@@ -287,19 +353,22 @@ void loop(void)
 
   // Update filters only if parameters changed
   settings = &filterSettings[selectedFilterBand]; // The band could have changed
-  if (newFrequency == settings->frequency && oldFilterType == settings->type && newGain == settings->gain 
-    && newQ == settings->Q && oldSelectedBand == selectedFilterBand)
+  if (newFrequency == settings->frequency && oldFilterType == settings->type && newGain == settings->gain && newQ == settings->Q && oldSelectedBand == selectedFilterBand && oldDisplayMode == displayMode)
   {
     // Save to EEPROM if needed
     unsigned long currentTime = millis();
     if (saveNeeded && currentTime - lastSaveTime > SAVE_INTERVAL_MS)
     {
       PersistedSettings persistedSettings;
-      persistedSettings.filterTypes[selectedFilterBand] = settings->type;
-      persistedSettings.filterFrequencies[selectedFilterBand] = settings->frequency;
-      persistedSettings.filterGains[selectedFilterBand] = settings->gain;
-      persistedSettings.filterQs[selectedFilterBand] = settings->Q;
+      for (int i = 0; i < FILTER_BANDS; i++)
+      {
+        persistedSettings.filterSettings[i] = filterSettings[i];
+      }
       saveSettings(persistedSettings);
+      PersistedSettings testSettings;
+      loadSettings(testSettings);
+      Serial.printf("Test loaded settings: filter[0].frequency=%.2f\n", testSettings.filterSettings[0].frequency);
+
       lastSaveTime = currentTime;
       Serial.println("Settings saved to EEPROM.");
       saveNeeded = false;
@@ -312,21 +381,7 @@ void loop(void)
   settings->Q = newQ;
 
   // Set up filter according to type
-  switch (settings->type)
-  {
-  case LOWSHELF:
-    filterLeft.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    filterRight.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    break;
-  case HIGHSHELF:
-    filterLeft.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    filterRight.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    break;
-  case PEAKINGEQ:
-    filterLeft.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
-    filterRight.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
-    break;
-  }
+  updateSelectedFilter(selectedFilterBand);
   updateDisplay();
   saveNeeded = true;
 }
