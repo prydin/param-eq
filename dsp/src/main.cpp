@@ -76,7 +76,7 @@ AudioConnection patchCordR1(waveform, 0, filterRight, 0);
 
 AudioMixer4 mixer2;
 AudioMixer4 mixer1;
-AudioOutputI2S i2s;
+AudioOutputI2S_int32 i2s;
 
 // Conect filter chains to mixers and I2S output
 AudioConnection patchCord1(filterLeft, 0, mixer1, 0);
@@ -159,42 +159,62 @@ void updateDisplay()
   for (int i = 0; i < FILTER_BANDS; i++)
   {
     packet.selectedFilterBand = selectedFilterBand;
-    packet.data.params[i].filterType = settings->type;
-    packet.data.params[i].frequency = htonf(settings->frequency);
-    packet.data.params[i].Q = htonf(settings->Q);
-    packet.data.params[i].gain = htonf(settings->gain);
+    packet.data.params[i].filterType = filterSettings[i].type;
+    packet.data.params[i].frequency = htonf(filterSettings[i].frequency);
+    packet.data.params[i].Q = htonf(filterSettings[i].Q);
+    packet.data.params[i].gain = htonf(filterSettings[i].gain);
   }
   sendToDisplay(&packet);
 }
 
-void updateSelectedFilter(int selected)
+/**
+ * @brief Updates the filter coefficients for the selected filter band.
+ * 
+ * This function configures both left and right channel filters based on the
+ * filter type and parameters stored in the filterSettings array for the
+ * specified band.
+ * 
+ * @param selected The index of the filter band to update
+ * 
+ * @note The function applies the same filter settings to both left and right
+ *       channels to maintain stereo coherence.
+ * @note Supported filter types: LOWSHELF, HIGHSHELF, PEAKINGEQ, and BYPASS
+ */
+void updateFilter(int selected)
 {
   FilterSettings *settings = &filterSettings[selected];
   switch (settings->type)
   {
   case LOWSHELF:
-    filterLeft.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    filterRight.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    filterLeft.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
+    filterRight.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
     break;
   case HIGHSHELF:
-    filterLeft.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    filterRight.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    filterLeft.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
+    filterRight.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
     break;
   case PEAKINGEQ:
-    filterLeft.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
-    filterRight.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
+    filterLeft.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
+    filterRight.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
     break;
   case BYPASS:
-    filterLeft.bypass(selectedFilterBand);
-    filterRight.bypass(selectedFilterBand);
+    filterLeft.bypass(selected);
+    filterRight.bypass(selected);
   }
 }
 
+/**
+ * @brief Updates all filter bands by applying the current settings.
+ * 
+ * This function iterates through all filter bands defined by FILTER_BANDS
+ * and calls updateFilter() for each band to ensure that the filter
+ * coefficients are up to date based on the current settings.
+ */
 void updateAllFilters()
 {
   for (int i = 0; i < FILTER_BANDS; i++)
   {
-    updateSelectedFilter(i);
+    updateFilter(i);
   }
 }
 
@@ -271,6 +291,8 @@ void setup(void)
     {
       filterSettings[i] = persistedSettings.filterSettings[i];
     }
+    selectedFilterBand = persistedSettings.selectedFilterBand;
+    displayMode = persistedSettings.displayMode;
     Serial.println("Loaded persisted settings from EEPROM.");
   }
   else
@@ -364,6 +386,8 @@ void loop(void)
       {
         persistedSettings.filterSettings[i] = filterSettings[i];
       }
+      persistedSettings.selectedFilterBand = selectedFilterBand;
+      persistedSettings.displayMode = displayMode;
       saveSettings(persistedSettings);
       lastSaveTime = currentTime;
       Serial.println("Settings saved to EEPROM.");
@@ -377,7 +401,7 @@ void loop(void)
   settings->Q = newQ;
 
   // Set up filter according to type
-  updateSelectedFilter(selectedFilterBand);
+  updateFilter(selectedFilterBand);
   updateDisplay();
   saveNeeded = true;
 }

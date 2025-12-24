@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Peaking EQ filter coefficient calculation
-G = 15
-fc = 15000
-fs = 48000
-Q = 1
+G = 13
+fc = 6140
+fs = 44100
+Q = 5
 
 
 def precalc(fc, fs, Q, G):

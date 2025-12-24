@@ -21,8 +21,19 @@
  * @note The structure is padded for proper memory alignment.
  * 
  * @var Packet::packetType
- *      Identifies the type of packet being transmitted.
- * 
+ *      Identifies the type of packet being transmitted:
+ *      - PACKET_COEFFS (0x01): Filter coefficient data
+ *      - PACKET_PARAMS (0x02): Filter parameter data
+ *      - PACKET_INDICATORS (0x03): Audio level indicators
+ *
+ * @var Packet::selectedFilterBand
+ *      Index of the currently selected filter band for display or editing.
+ *
+ * @var Packet::displayMode
+ *      Display mode selection:
+ *      - DISPLAY_MODE_INDIVIDUAL (0x00): Show individual filter band
+ *      - DISPLAY_MODE_COMBINED (0x01): Show combined frequency response
+ *
  * @var Packet::reserved
  *      Padding bytes for 4-byte alignment.
  * 
@@ -93,6 +104,12 @@ typedef struct {
             uint32_t Q;
             uint32_t gain;
         } params[FILTER_BANDS];
+        struct {
+            uint8_t clipped;
+            uint8_t reserved[3]; // Padding for alignment
+            uint32_t peakLevel;
+            uint32_t rmsLevel;
+        } levels;
     } data;
     uint32_t checksum; // Netwrk order checksum of all previous bytes in the packet
 } Packet;

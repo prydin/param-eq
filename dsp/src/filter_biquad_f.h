@@ -113,20 +113,46 @@
      void setLowShelf(uint32_t stage, biquad_num_t frequency, biquad_num_t gain, biquad_num_t slope = 1.0f) {
          biquad_num_t coef[STAGE_COEFFICIENTS];
          biquad_num_t a = pow(10.0, gain/40.0f);
+         Serial.printf("LowShelf Gain a = %f\n", a);
          biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
          biquad_num_t sinW0 = sin(w0);
          //biquad_num_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
          biquad_num_t cosW0 = cos(w0);
          //generate three helper-values (intermediate results):
-         biquad_num_t sinsq = sinW0 * sqrt( (pow(a,2.0)+1.0)*(1.0/(biquad_num_t)slope-1.0)+2.0*a );
+         biquad_num_t ss = (a*a+1.0)*(1.0/(biquad_num_t)slope-1.0)+2.0*a;
+         if(ss < 0.0) {
+            // Avoid taking the square root of a negative number
+            return; // invalid parameter combination
+         }
+         biquad_num_t sinsq = sinW0 * sqrt( ss );
          biquad_num_t aMinus = (a-1.0)*cosW0;
          biquad_num_t aPlus = (a+1.0)*cosW0;
          biquad_num_t scale = 1.0 / ( (a+1.0) + aMinus + sinsq);
+         #ifdef VERBOSE
+         // Print all pre-calculated values for debugging
+         Serial.printf("LowShelf Filter Stage %d:\n", stage);
+            Serial.printf("  a = %f\n", a);
+            Serial.printf("  w0 = %f\n", w0);
+            Serial.printf("  sinW0 = %f\n", sinW0);
+            Serial.printf("  cosW0 = %f\n", cosW0);
+            Serial.printf("  sinsq = %f\n", sinsq);
+            Serial.printf("  aMinus = %f\n", aMinus);
+            Serial.printf("  aPlus = %f\n", aPlus);
+            Serial.printf("  scale = %f\n", scale);
+        #endif
+
          /* b0 */ coef[0] =		a *	( (a+1.0) - aMinus + sinsq	) * scale;
          /* b1 */ coef[1] =  2.0*a * ( (a-1.0) - aPlus  			) * scale;
          /* b2 */ coef[2] =		a * ( (a+1.0) - aMinus - sinsq 	) * scale;
          /* a1 */ coef[3] = -2.0*	( (a-1.0) + aPlus			) * scale;
          /* a2 */ coef[4] =  		( (a+1.0) + aMinus - sinsq	) * scale;
+         #ifdef VERBOSE
+         Serial.printf("LowShelf Coefficients for stage %d:\n", stage);
+         for(int i=0; i<STAGE_COEFFICIENTS; i++) {
+            Serial.printf("  coef[%d] = %f\n", i, coef[i]);
+         }  
+         #endif
+         Serial.println();
          setCoefficients(stage, coef);
      }
      void setHighShelf(uint32_t stage, biquad_num_t frequency, biquad_num_t gain, biquad_num_t slope = 1.0f) {
@@ -137,7 +163,12 @@
          //biquad_num_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
          biquad_num_t cosW0 = cos(w0);
          //generate three helper-values (intermediate results):
-         biquad_num_t sinsq = sinW0 * sqrt( (pow(a,2.0)+1.0)*(1.0/(biquad_num_t)slope-1.0)+2.0*a );
+         biquad_num_t ss = (a*a+1.0)*(1.0/(biquad_num_t)slope-1.0)+2.0*a;
+         if(ss < 0.0) {
+            // Avoid taking the square root of a negative number
+            return; 
+         }
+         biquad_num_t sinsq = sinW0 * sqrt(ss);
          biquad_num_t aMinus = (a-1.0)*cosW0;
          biquad_num_t aPlus = (a+1.0)*cosW0;
          biquad_num_t scale = 1.0 / ( (a+1.0) - aMinus + sinsq);

@@ -8,6 +8,7 @@ struct PersistedSettings
     uint32_t version;                          // Version number for future compatibility
     FilterSettings filterSettings[FILTER_BANDS]; // Settings for low, mid, high bands
     uint8_t selectedFilterBand;                // Currently selected filter band
+    uint8_t displayMode;                       // Current display mode
     uint32_t checksum;                         // Checksum for data integrity
 };
 
