@@ -1,5 +1,3 @@
-
-
  #ifndef filter_biquad_f_h_
  #define filter_biquad_f_h_
  
@@ -9,10 +7,10 @@
  #define MAX_BIQUAD_STAGES 4
  #define STAGE_COEFFICIENTS 5
 
- typedef float biquad_num_t;
+ typedef float sample_t;
 
  // Flat filter with unity gain. 
- static const biquad_num_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
+ static const sample_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
  
  class AudioFilterBiquadFloat : public AudioStream
  {
@@ -25,7 +23,7 @@
      virtual void update(void);
  
      // Set the biquad coefficients directly
-     void setCoefficients(uint32_t stage, const biquad_num_t *coefficients) {        
+     void setCoefficients(uint32_t stage, const sample_t *coefficients) {        
          __disable_irq()
          for(int i = 0; i < STAGE_COEFFICIENTS; i++) {
              coeff[stage * STAGE_COEFFICIENTS + i] = coefficients[i];
@@ -37,7 +35,7 @@
          // Serial.printf("num_stages = %d\n", num_stages);
      }
 
-     void setSosCoefficients(uint32_t stages, const biquad_num_t *sos) {
+     void setSosCoefficients(uint32_t stages, const sample_t *sos) {
          __disable_irq()
          for(uint32_t i = 0; i < stages * STAGE_COEFFICIENTS; i++) {
             coeff[i] = sos[i]; 
@@ -53,13 +51,13 @@
  
      // Compute common filter functions
      // http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
-     void setLowpass(uint32_t stage, biquad_num_t frequency, biquad_num_t q = 0.7071f) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         biquad_num_t alpha = sinW0 / ((biquad_num_t)q * 2.0);
-         biquad_num_t cosW0 = cos(w0);
-         biquad_num_t scale = 1.0 / (1.0 + alpha);
+     void setLowpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071f) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
+         sample_t cosW0 = cos(w0);
+         sample_t scale = 1.0 / (1.0 + alpha);
          /* b0 */ coef[0] = ((1.0 - cosW0) / 2.0) * scale;
          /* b1 */ coef[1] = (1.0 - cosW0) * scale;
          /* b2 */ coef[2] = coef[0];
@@ -67,13 +65,13 @@
          /* a2 */ coef[4] = (1.0 - alpha) * scale;
          setCoefficients(stage, coef);
      }
-     void setHighpass(uint32_t stage, biquad_num_t frequency, biquad_num_t q = 0.7071) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         biquad_num_t alpha = sinW0 / ((biquad_num_t)q * 2.0);
-         biquad_num_t cosW0 = cos(w0);
-         biquad_num_t scale = 1.0 / (1.0 + alpha);
+     void setHighpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
+         sample_t cosW0 = cos(w0);
+         sample_t scale = 1.0 / (1.0 + alpha);
          /* b0 */ coef[0] = ((1.0 + cosW0) / 2.0) * scale;
          /* b1 */ coef[1] = -(1.0 + cosW0) * scale;
          /* b2 */ coef[2] = coef[0];
@@ -82,13 +80,13 @@
          /* a2 */ coef[5] = (1.0 - alpha) * scale;
          setCoefficients(stage, coef);
      }
-     void setBandpass(uint32_t stage, biquad_num_t frequency, biquad_num_t q = 1.0) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         biquad_num_t alpha = sinW0 / ((biquad_num_t)q * 2.0);
-         biquad_num_t cosW0 = cos(w0);
-         biquad_num_t scale = 1.0 / (1.0 + alpha);
+     void setBandpass(uint32_t stage, sample_t frequency, sample_t q = 1.0) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
+         sample_t cosW0 = cos(w0);
+         sample_t scale = 1.0 / (1.0 + alpha);
          /* b0 */ coef[0] = alpha * scale;
          /* b1 */ coef[1] = 0;
          /* b2 */ coef[2] = (-alpha) * scale;
@@ -96,13 +94,13 @@
          /* a2 */ coef[4] = (1.0 - alpha) * scale;
          setCoefficients(stage, coef);
      }
-     void setNotch(uint32_t stage, biquad_num_t frequency, biquad_num_t q = 1.0) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         biquad_num_t alpha = sinW0 / ((biquad_num_t)q * 2.0);
-         biquad_num_t cosW0 = cos(w0);
-         biquad_num_t scale = 1.0 / (1.0 + alpha);
+     void setNotch(uint32_t stage, sample_t frequency, sample_t q = 1.0) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
+         sample_t cosW0 = cos(w0);
+         sample_t scale = 1.0 / (1.0 + alpha);
          /* b0 */ coef[0] = scale;
          /* b1 */ coef[1] = (-2.0 * cosW0) * scale;
          /* b2 */ coef[2] = coef[0];
@@ -110,24 +108,24 @@
          /* a2 */ coef[4] = (1.0 - alpha) * scale;
          setCoefficients(stage, coef);
      }
-     void setLowShelf(uint32_t stage, biquad_num_t frequency, biquad_num_t gain, biquad_num_t slope = 1.0f) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t a = pow(10.0, gain/40.0f);
+     void setLowShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t a = pow(10.0, gain/40.0f);
          Serial.printf("LowShelf Gain a = %f\n", a);
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         //biquad_num_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
-         biquad_num_t cosW0 = cos(w0);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         //sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
+         sample_t cosW0 = cos(w0);
          //generate three helper-values (intermediate results):
-         biquad_num_t ss = (a*a+1.0)*(1.0/(biquad_num_t)slope-1.0)+2.0*a;
+         sample_t ss = (a*a+1.0)*(1.0/(sample_t)slope-1.0)+2.0*a;
          if(ss < 0.0) {
             // Avoid taking the square root of a negative number
             return; // invalid parameter combination
          }
-         biquad_num_t sinsq = sinW0 * sqrt( ss );
-         biquad_num_t aMinus = (a-1.0)*cosW0;
-         biquad_num_t aPlus = (a+1.0)*cosW0;
-         biquad_num_t scale = 1.0 / ( (a+1.0) + aMinus + sinsq);
+         sample_t sinsq = sinW0 * sqrt( ss );
+         sample_t aMinus = (a-1.0)*cosW0;
+         sample_t aPlus = (a+1.0)*cosW0;
+         sample_t scale = 1.0 / ( (a+1.0) + aMinus + sinsq);
          #ifdef VERBOSE
          // Print all pre-calculated values for debugging
          Serial.printf("LowShelf Filter Stage %d:\n", stage);
@@ -155,23 +153,23 @@
          Serial.println();
          setCoefficients(stage, coef);
      }
-     void setHighShelf(uint32_t stage, biquad_num_t frequency, biquad_num_t gain, biquad_num_t slope = 1.0f) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t a = pow(10.0, gain/40.0f);
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         //biquad_num_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
-         biquad_num_t cosW0 = cos(w0);
+     void setHighShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t a = pow(10.0, gain/40.0f);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         //sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
+         sample_t cosW0 = cos(w0);
          //generate three helper-values (intermediate results):
-         biquad_num_t ss = (a*a+1.0)*(1.0/(biquad_num_t)slope-1.0)+2.0*a;
+         sample_t ss = (a*a+1.0)*(1.0/(sample_t)slope-1.0)+2.0*a;
          if(ss < 0.0) {
             // Avoid taking the square root of a negative number
             return; 
          }
-         biquad_num_t sinsq = sinW0 * sqrt(ss);
-         biquad_num_t aMinus = (a-1.0)*cosW0;
-         biquad_num_t aPlus = (a+1.0)*cosW0;
-         biquad_num_t scale = 1.0 / ( (a+1.0) - aMinus + sinsq);
+         sample_t sinsq = sinW0 * sqrt(ss);
+         sample_t aMinus = (a-1.0)*cosW0;
+         sample_t aPlus = (a+1.0)*cosW0;
+         sample_t scale = 1.0 / ( (a+1.0) - aMinus + sinsq);
          /* b0 */ coef[0] =		a *	( (a+1.0) + aMinus + sinsq	) * scale;
          /* b1 */ coef[1] = -2.0*a * ( (a-1.0) + aPlus  			) * scale;
          /* b2 */ coef[2] =		a * ( (a+1.0) + aMinus - sinsq 	) * scale;
@@ -180,14 +178,14 @@
          setCoefficients(stage, coef);
      }
 
-     void setPeakingEQ(uint32_t stage, biquad_num_t frequency, biquad_num_t q, biquad_num_t gain) {
-         biquad_num_t coef[STAGE_COEFFICIENTS];
-         biquad_num_t a = pow(10.0, gain/40.0f);
-         biquad_num_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
-         biquad_num_t sinW0 = sin(w0);
-         biquad_num_t alpha = sinW0 / (q * 2.0f);
-         biquad_num_t cosW0 = cos(w0);
-         biquad_num_t scale = 1.0 / (1.0 + alpha / a);
+     void setPeakingEQ(uint32_t stage, sample_t frequency, sample_t q, sample_t gain) {
+         sample_t coef[STAGE_COEFFICIENTS];
+         sample_t a = pow(10.0, gain/40.0f);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t sinW0 = sin(w0);
+         sample_t alpha = sinW0 / (q * 2.0f);
+         sample_t cosW0 = cos(w0);
+         sample_t scale = 1.0 / (1.0 + alpha / a);
          /* b0 */ coef[0] = (1.0 + alpha * a) * scale;
          /* b1 */ coef[1] = (-2.0 * cosW0) * scale; 
          /* b2 */ coef[2] = (1.0 - alpha * a) * scale;
@@ -204,8 +202,8 @@
     }
 
  //private:
-     biquad_num_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
-     biquad_num_t state[2 * MAX_BIQUAD_STAGES];
+     sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
+     sample_t state[2 * MAX_BIQUAD_STAGES];
      audio_block_t *inputQueueArray[1];
      uint32_t num_stages = 0; // number of stages in use
  };

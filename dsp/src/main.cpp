@@ -15,7 +15,7 @@
  * @note I2C display address is hardcoded to 0xb1ce.
  * @note Audio processing uses floating-point biquad filters for precise frequency response control.
  */
-#include <Audio.h>
+#include <Teensy4i2s.h>
 #include <Wire.h>
 #include <Wire.h>
 #include <SD.h>
@@ -70,19 +70,6 @@ AudioSynthWaveform waveform;
 // The filters
 AudioFilterBiquadFloat filterLeft;
 AudioFilterBiquadFloat filterRight;
-
-AudioConnection patchCordL1(waveform, 0, filterLeft, 0);
-AudioConnection patchCordR1(waveform, 0, filterRight, 0);
-
-AudioMixer4 mixer2;
-AudioMixer4 mixer1;
-AudioOutputI2S_int32 i2s;
-
-// Conect filter chains to mixers and I2S output
-AudioConnection patchCord1(filterLeft, 0, mixer1, 0);
-AudioConnection patchCord2(filterRight, 0, mixer2, 0);
-AudioConnection patchCord3(mixer2, 0, i2s, 1);
-AudioConnection patchCord4(mixer1, 0, i2s, 0);
 
 // User settings
 FilterSettings filterSettings[FILTER_BANDS];
