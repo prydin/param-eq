@@ -4,10 +4,8 @@
 #include <Arduino.h>
 #include "filter_biquad_f.h"
 
-void AudioFilterBiquadFloat::update(void)
+void AudioFilterBiquadFloat::process(AudioBuffer *block)
 {
-    audio_block_t *block;
-    block = receiveWritable();
     if (!block)
     {
         return;
@@ -16,19 +14,30 @@ void AudioFilterBiquadFloat::update(void)
     {
         // No stages defined, just pass through the input
         transmit(block);
-        release(block);
         return;
     }
-
-    int16_t *data = block->data;
-    int16_t *end = block->data + AUDIO_BLOCK_SAMPLES;
-    for(; data < end; data++)
+    AudioBuffer* outputBlock = getBuffer();
+    if (outputBlock == nullptr) {
+        return;
+    }
+    for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
     {
-        sample_t x = ((sample_t) *data) / 32768.0f;
+        processChannel(block->data[ch], outputBlock->data[ch]);
+    }
+    transmit(outputBlock);
+    release(outputBlock);
+}
+
+void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output)
+{
+    sample_t *end = input + AUDIO_BLOCK_SAMPLES;
+    for (; input < end; input++)
+    {
+        sample_t x = ((sample_t)*input) / 32768.0f;
         sample_t y = 0.0f;
 
         // Second direct form
-        for(uint32_t i = 0; i < num_stages; i++)
+        for (uint32_t i = 0; i < num_stages; i++)
         {
             sample_t *my_coeff = coeff + i * STAGE_COEFFICIENTS;
             sample_t *my_state = state + i * 2;
@@ -39,10 +48,8 @@ void AudioFilterBiquadFloat::update(void)
             x = y;
         }
         digitalWriteFast(LED_BUILTIN, y > 1.0 || y < -1.0 ? HIGH : LOW);
-        *data = (int16_t) (max(-1.0f, min(1.0f, min(y, 1.0f))) * 32768.0f);
-    } 
-    transmit(block);
-    release(block);
+        *output = (int16_t)(max(-1.0f, min(1.0f, min(y, 1.0f))) * 32768.0f);
+    }
 }
 
 #endif

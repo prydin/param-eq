@@ -25,7 +25,9 @@
 #include <stdlib.h>
 #include "../../common/filter.h"
 #include "../../common/packets.h"
-#include "filter_biquad_f.h"
+#include "audio_pipeline/filter_biquad_f.h"
+#include "audio_pipeline/audio_square_wave.h"
+#include "audio_pipeline/audio_gain.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
@@ -65,11 +67,12 @@ OneButton filterSelectButton(FILTER_INDEX_PIN, true);
 OneButton filterTypeSelectButton(FILTER_TYPE_PIN, true);
 OneButton displayModeButton(FILTER_MODE_PIN, true);
 
-AudioSynthWaveform waveform;
+AudioSquareWave waveform;
 
 // The filters
-AudioFilterBiquadFloat filterLeft;
-AudioFilterBiquadFloat filterRight;
+AudioFilterBiquadFloat filter;
+
+AudioGain gain;
 
 // User settings
 FilterSettings filterSettings[FILTER_BANDS];
@@ -128,7 +131,7 @@ void updateDisplay()
   packet.displayMode = displayMode;
   for (int i = 0; i < FILTER_BANDS; i++)
   {
-    const float *coeffs = filterLeft.getCoefficients(i);
+    const float *coeffs = filter.getCoefficients(i);
     packet.data.coeffs[i].b0 = htonf(coeffs[0]);
     packet.data.coeffs[i].b1 = htonf(coeffs[1]);
     packet.data.coeffs[i].b2 = htonf(coeffs[2]);
@@ -173,20 +176,16 @@ void updateFilter(int selected)
   switch (settings->type)
   {
   case LOWSHELF:
-    filterLeft.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
-    filterRight.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
+    filter.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
     break;
   case HIGHSHELF:
-    filterLeft.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
-    filterRight.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
+    filter.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
     break;
   case PEAKINGEQ:
-    filterLeft.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
-    filterRight.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
+    filter.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
     break;
   case BYPASS:
-    filterLeft.bypass(selected);
-    filterRight.bypass(selected);
+    filter.bypass(selected);
   }
 }
 
@@ -225,11 +224,20 @@ void updateAllFilters()
 void setup(void)
 {
   Serial.begin(115000);
-  AudioMemory(12);
-  waveform.begin(WAVEFORM_SQUARE);
-  waveform.amplitude(0.3f);
-  waveform.frequency(980.0f);
 
+  // Build audio pipeline
+  waveform.setAmplitude(0.5f);
+  waveform.setFrequency(980.0f); // 980 Hz test tone
+  waveform.addReceiver(&filter);
+  AudioController::getInstance()->addReceiver(&waveform);
+  filter.addReceiver(&gain);
+  gain.setGain(1.0f); // Reduce volume to avoid clipping
+  gain.addReceiver(AudioController::getInstance());
+  InitI2s();
+
+  // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
+  delay(1000);
+  
   // Initialize UI
   // Set all the rotary encoder pints to input mode
   pinMode(FC_PIN_A, INPUT);
@@ -263,9 +271,6 @@ void setup(void)
   pinMode(A12, INPUT);
   pinMode(10, OUTPUT);
   digitalWrite(10, HIGH); // Chip select high
-
-  mixer1.gain(0, 0.5); // Left channel
-  mixer2.gain(0, 0.5); // Right channel
 
   // Reset last save time
   lastSaveTime = millis();

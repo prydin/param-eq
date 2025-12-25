@@ -16,6 +16,7 @@ AudioBuffer *AudioBufferPool::getBuffer()
 {
     if (freeList == nullptr)
     {
+        Serial.println("PANIC: AudioBufferPool: No free buffers available!");
         return nullptr; // No available buffer
     }
     AudioBuffer *buffer = freeList;
@@ -23,6 +24,17 @@ AudioBuffer *AudioBufferPool::getBuffer()
     buffer->refCount = 1;
     buffer->next = nullptr;
     return buffer;
+}
+
+AudioBuffer *AudioBufferPool::clone(AudioBuffer *source)
+{
+    AudioBuffer *newBuffer = getBuffer();
+    if (newBuffer == nullptr)
+    {
+        return nullptr; // No available buffer
+    }
+    memcpy(newBuffer->data, source->data, sizeof(source->data));
+    return newBuffer;
 }
 
 void AudioBufferPool::releaseBuffer(AudioBuffer *buffer)

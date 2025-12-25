@@ -18,18 +18,13 @@ public:
         refCount++;
     }
 
-    void release()
-    {
-        if (--refCount == 0)
-        {
-            // Return to pool or free
-        }
-    }
+    void release();
 };
 
 class AudioBufferPool
 {
 public:
+    friend class AudioBuffer;
     AudioBufferPool(size_t poolSize);
     ~AudioBufferPool()
     {
@@ -37,17 +32,28 @@ public:
     }
 
     AudioBuffer *getBuffer();
-    void releaseBuffer(AudioBuffer *buffer);
+    AudioBuffer *clone(AudioBuffer *source);
     static AudioBufferPool &getInstance(size_t poolSize = 16)
     {
         static AudioBufferPool instance(poolSize);
         return instance;
     }
 
+protected:
+    void releaseBuffer(AudioBuffer *buffer);
+
 private:
     AudioBuffer *pool;
     AudioBuffer *freeList;
     size_t poolSize;
 };
+
+inline void AudioBuffer::release()
+{
+    if(--refCount == 0)
+    {
+        AudioBufferPool::getInstance().releaseBuffer(this);
+    }
+}
 
 #endif // AUDIO_BUFFER_H

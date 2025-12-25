@@ -6,6 +6,6 @@ void AudioComponent::transmit(AudioBuffer *block)
     {
         block->grab();
         recipient->process(block);
-        AudioBufferPool::getInstance().releaseBuffer(block);
+        release(block);
     }
 }

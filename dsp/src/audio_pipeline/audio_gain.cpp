@@ -15,14 +15,20 @@ void AudioGain::setGainDb(float gainDb) {
 }
 
 void AudioGain::process(AudioBuffer* block) {
-    // Process all channels and samples
+    if (block == nullptr) return;
+    
+    // Apply gain to all channels and samples in-place
+    AudioBuffer* outputBlock = getBuffer();
+    if (outputBlock == nullptr) {
+        return;
+    }
     for (int channel = 0; channel < AUDIO_CHANNELS; channel++) {
         for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-            // Apply gain to each sample
-            AudioBuffer* newBlock =  AudioBufferPool::getInstance().getBuffer();
-            newBlock->data[channel][i] = (sample_t)(block->data[channel][i] * gain);
-            transmit(newBlock);
-            newBlock->release();
+            outputBlock->data[channel][i] = block->data[channel][i] * gain;
         }
     }
+    
+    // Pass the modified block to next component
+    transmit(outputBlock);
+    release(outputBlock);
 }

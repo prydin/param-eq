@@ -1,8 +1,8 @@
  #ifndef filter_biquad_f_h_
  #define filter_biquad_f_h_
  
- #include <Arduino.h>     // github.com/PaulStoffregen/cores/blob/master/teensy4/Arduino.h
- #include <AudioStream.h> // github.com/PaulStoffregen/cores/blob/master/teensy4/AudioStream.h
+ #include <Arduino.h>     
+ #include "audio_controller.h"
 
  #define MAX_BIQUAD_STAGES 4
  #define STAGE_COEFFICIENTS 5
@@ -12,15 +12,16 @@
  // Flat filter with unity gain. 
  static const sample_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
  
- class AudioFilterBiquadFloat : public AudioStream
+ class AudioFilterBiquadFloat : public AudioComponent
  {
  public:
-     AudioFilterBiquadFloat(void) : AudioStream(1, inputQueueArray) {
+     AudioFilterBiquadFloat(void) : AudioComponent() {
          // by default, the filter will not pass anything
          for (int i=0; i<MAX_BIQUAD_STAGES * STAGE_COEFFICIENTS; i++) coeff[i] = 0;
          for (int i=0; i<MAX_BIQUAD_STAGES * 2; i++) state[i] = 0;
      }
-     virtual void update(void);
+
+     virtual void process(AudioBuffer *block) override;
  
      // Set the biquad coefficients directly
      void setCoefficients(uint32_t stage, const sample_t *coefficients) {        
@@ -53,7 +54,7 @@
      // http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
      void setLowpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071f) {
          sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          sample_t alpha = sinW0 / ((sample_t)q * 2.0);
          sample_t cosW0 = cos(w0);
@@ -67,7 +68,7 @@
      }
      void setHighpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071) {
          sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          sample_t alpha = sinW0 / ((sample_t)q * 2.0);
          sample_t cosW0 = cos(w0);
@@ -82,7 +83,7 @@
      }
      void setBandpass(uint32_t stage, sample_t frequency, sample_t q = 1.0) {
          sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          sample_t alpha = sinW0 / ((sample_t)q * 2.0);
          sample_t cosW0 = cos(w0);
@@ -96,7 +97,7 @@
      }
      void setNotch(uint32_t stage, sample_t frequency, sample_t q = 1.0) {
          sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          sample_t alpha = sinW0 / ((sample_t)q * 2.0);
          sample_t cosW0 = cos(w0);
@@ -112,7 +113,7 @@
          sample_t coef[STAGE_COEFFICIENTS];
          sample_t a = pow(10.0, gain/40.0f);
          Serial.printf("LowShelf Gain a = %f\n", a);
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          //sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
          sample_t cosW0 = cos(w0);
@@ -156,7 +157,7 @@
      void setHighShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f) {
          sample_t coef[STAGE_COEFFICIENTS];
          sample_t a = pow(10.0, gain/40.0f);
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          //sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
          sample_t cosW0 = cos(w0);
@@ -181,7 +182,7 @@
      void setPeakingEQ(uint32_t stage, sample_t frequency, sample_t q, sample_t gain) {
          sample_t coef[STAGE_COEFFICIENTS];
          sample_t a = pow(10.0, gain/40.0f);
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AUDIO_SAMPLE_RATE_EXACT);
+         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
          sample_t sinW0 = sin(w0);
          sample_t alpha = sinW0 / (q * 2.0f);
          sample_t cosW0 = cos(w0);
@@ -204,8 +205,8 @@
  //private:
      sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
      sample_t state[2 * MAX_BIQUAD_STAGES];
-     audio_block_t *inputQueueArray[1];
      uint32_t num_stages = 0; // number of stages in use
+     void processChannel(sample_t* input, sample_t* output);
  };
  
  #endif

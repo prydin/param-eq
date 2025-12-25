@@ -8,10 +8,20 @@
 
 class AudioComponent {
 public:
-    AudioComponent();
-    virtual void process(AudioBuffer* block);
-    void addRecipient(AudioComponent* recipient) {
+    AudioComponent() {};
+    ~AudioComponent() {};
+    virtual void process(AudioBuffer* block) {};
+    void addReceiver(AudioComponent* recipient) {
         outputs.push_back(recipient);
+    }
+    AudioBuffer* clone(AudioBuffer* source) {
+        return AudioBufferPool::getInstance().clone(source);
+    }
+    AudioBuffer* getBuffer() {
+        return AudioBufferPool::getInstance().getBuffer();
+    }   
+    void release(AudioBuffer* block) {
+        block->release();
     }
 
 protected:  
