@@ -226,13 +226,15 @@ void setup(void)
   Serial.begin(115000);
 
   // Build audio pipeline
+  // Source -> Gain -> Filter -> I2S
   waveform.setAmplitude(0.5f);
   waveform.setFrequency(980.0f); // 980 Hz test tone
-  waveform.addReceiver(&filter);
+  waveform.addReceiver(&gain);
+  gain.addReceiver(&filter);
+  filter.addReceiver(AudioController::getInstance());
+
   AudioController::getInstance()->addReceiver(&waveform);
-  filter.addReceiver(&gain);
-  gain.setGain(1.0f); // Reduce volume to avoid clipping
-  gain.addReceiver(AudioController::getInstance());
+  gain.setGain(0.5f); // Reduce volume to avoid clipping
   InitI2s();
 
   // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...

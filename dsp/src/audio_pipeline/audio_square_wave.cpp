@@ -12,6 +12,7 @@ AudioSquareWave::AudioSquareWave()
 void AudioSquareWave::setFrequency(float frequencyHz)
 {
     frequency = frequencyHz;
+    phaseIncrement = frequency / sampleRate;
 }
 
 void AudioSquareWave::setAmplitude(float amp)
@@ -32,14 +33,11 @@ void AudioSquareWave::process(AudioBuffer *block)
         return;
     }
 
-    // Calculate phase increment per sample
-    float phaseIncrement = frequency / sampleRate;
-
     // Generate square wave for all channels and samples
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
     {
         // Square wave: high when phase < 0.5, low when phase >= 0.5
-        sample_t value = (phase < 0.5f) ? amplitude : -amplitude;
+        sample_t value = phase < 0.5f ? amplitude : -amplitude;
 
         // Output to all channels
         for (int channel = 0; channel < AUDIO_CHANNELS; channel++)
@@ -49,15 +47,13 @@ void AudioSquareWave::process(AudioBuffer *block)
 
         // Advance phase and wrap
         phase += phaseIncrement;
+        // Serial.printf("Phase: %f\n", phase);
         if (phase >= 1.0f)
         {
-            phase -= 1.0f;
+            phase = 0.0f;
         }
     }
-
-    // Release the input block (we don't use it)
-    release(block);
-    
+ 
     // Transmit our generated buffer to connected components
     transmit(outputBlock);
     release(outputBlock);

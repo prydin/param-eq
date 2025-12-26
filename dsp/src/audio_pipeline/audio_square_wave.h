@@ -22,6 +22,7 @@ private:
     float amplitude;      // Amplitude (0.0 to 1.0)
     float phase;          // Current phase (0.0 to 1.0)
     float sampleRate;     // Sample rate from Teensy4i2s
+    float phaseIncrement; // Phase increment per sample
 };
 
 #endif // AUDIO_SQUARE_WAVE_H

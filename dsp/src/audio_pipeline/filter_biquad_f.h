@@ -1,213 +1,206 @@
- #ifndef filter_biquad_f_h_
- #define filter_biquad_f_h_
- 
- #include <Arduino.h>     
- #include "audio_controller.h"
+#ifndef filter_biquad_f_h_
+#define filter_biquad_f_h_
 
- #define MAX_BIQUAD_STAGES 4
- #define STAGE_COEFFICIENTS 5
+#include <Arduino.h>
+#include "audio_controller.h"
+#include "arm_math.h"
 
- typedef float sample_t;
+#define MAX_BIQUAD_STAGES 4
+#define STAGE_COEFFICIENTS 5
 
- // Flat filter with unity gain. 
- static const sample_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
- 
- class AudioFilterBiquadFloat : public AudioComponent
- {
- public:
-     AudioFilterBiquadFloat(void) : AudioComponent() {
-         // by default, the filter will not pass anything
-         for (int i=0; i<MAX_BIQUAD_STAGES * STAGE_COEFFICIENTS; i++) coeff[i] = 0;
-         for (int i=0; i<MAX_BIQUAD_STAGES * 2; i++) state[i] = 0;
-     }
+typedef float sample_t;
 
-     virtual void process(AudioBuffer *block) override;
- 
-     // Set the biquad coefficients directly
-     void setCoefficients(uint32_t stage, const sample_t *coefficients) {        
-         __disable_irq()
-         for(int i = 0; i < STAGE_COEFFICIENTS; i++) {
-             coeff[stage * STAGE_COEFFICIENTS + i] = coefficients[i];
-         }
-         if(stage + 1 > num_stages) {
-             num_stages = stage + 1;
-         }
-         __enable_irq()
-         // Serial.printf("num_stages = %d\n", num_stages);
-     }
+// Flat filter with unity gain.
+static const sample_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
 
-     void setSosCoefficients(uint32_t stages, const sample_t *sos) {
-         __disable_irq()
-         for(uint32_t i = 0; i < stages * STAGE_COEFFICIENTS; i++) {
-            coeff[i] = sos[i]; 
-         }
-         num_stages = stages;
-         __enable_irq()
-     }
+class AudioFilterBiquadFloat : public AudioComponent
+{
+public:
+    AudioFilterBiquadFloat(void) : AudioComponent() {}
 
-     const float* getCoefficients(uint32_t stage) {
+    virtual void process(AudioBuffer *block) override;
+
+    // Set the biquad coefficients directly
+    void setCoefficients(uint32_t stage, const sample_t *coefficients)
+    {
+        __disable_irq() for (int i = 0; i < STAGE_COEFFICIENTS; i++)
+        {
+            #ifdef USE_ARM_DSP
+            // ARM CMSIS-DSP uses negative feedback denominator coefficients
+            coeff[stage * STAGE_COEFFICIENTS + i] = i > 2 ? -coefficients[i] : coefficients[i];
+            #else
+            coeff[stage * STAGE_COEFFICIENTS + i] = coefficients[i];
+            #endif
+        }
+        if (stage + 1 > num_stages)
+        {
+            num_stages = stage + 1;
+        }
+        Serial.printf("Set Biquad Stage %d out of %d Coefficients: b0=%f b1=%f b2=%f a1=%f a2=%f\n",
+                      stage, num_stages,
+                      coefficients[0],
+                      coefficients[1],
+                      coefficients[2],
+                      coefficients[3],
+                      coefficients[4]);
+        arm_biquad_cascade_df1_init_f32(&iir_inst, num_stages, coeff, state);
+        __enable_irq()
+        // Serial.printf("num_stages = %d\n", num_stages);
+    }
+
+    void setSosCoefficients(uint32_t stages, const sample_t *sos)
+    {
+        __disable_irq() for (uint32_t i = 0; i < stages * STAGE_COEFFICIENTS; i++)
+        {
+            coeff[i] = sos[i];
+        }
+        num_stages = stages;
+        __enable_irq()
+    }
+
+    const float *getCoefficients(uint32_t stage)
+    {
         // Return identity filter if stage isn't active
         return stage < num_stages ? &coeff[stage * STAGE_COEFFICIENTS] : identityCoefficients;
-     }
- 
-     // Compute common filter functions
-     // http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
-     void setLowpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071f) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
-         sample_t cosW0 = cos(w0);
-         sample_t scale = 1.0 / (1.0 + alpha);
-         /* b0 */ coef[0] = ((1.0 - cosW0) / 2.0) * scale;
-         /* b1 */ coef[1] = (1.0 - cosW0) * scale;
-         /* b2 */ coef[2] = coef[0];
-         /* a1 */ coef[3] = (-2.0 * cosW0) * scale;
-         /* a2 */ coef[4] = (1.0 - alpha) * scale;
-         setCoefficients(stage, coef);
-     }
-     void setHighpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
-         sample_t cosW0 = cos(w0);
-         sample_t scale = 1.0 / (1.0 + alpha);
-         /* b0 */ coef[0] = ((1.0 + cosW0) / 2.0) * scale;
-         /* b1 */ coef[1] = -(1.0 + cosW0) * scale;
-         /* b2 */ coef[2] = coef[0];
-         /* a0 */ coef[3] = 1.0;
-         /* a1 */ coef[4] = (-2.0 * cosW0) * scale;
-         /* a2 */ coef[5] = (1.0 - alpha) * scale;
-         setCoefficients(stage, coef);
-     }
-     void setBandpass(uint32_t stage, sample_t frequency, sample_t q = 1.0) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
-         sample_t cosW0 = cos(w0);
-         sample_t scale = 1.0 / (1.0 + alpha);
-         /* b0 */ coef[0] = alpha * scale;
-         /* b1 */ coef[1] = 0;
-         /* b2 */ coef[2] = (-alpha) * scale;
-         /* a1 */ coef[3] = (-2.0 * cosW0) * scale;
-         /* a2 */ coef[4] = (1.0 - alpha) * scale;
-         setCoefficients(stage, coef);
-     }
-     void setNotch(uint32_t stage, sample_t frequency, sample_t q = 1.0) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         sample_t alpha = sinW0 / ((sample_t)q * 2.0);
-         sample_t cosW0 = cos(w0);
-         sample_t scale = 1.0 / (1.0 + alpha);
-         /* b0 */ coef[0] = scale;
-         /* b1 */ coef[1] = (-2.0 * cosW0) * scale;
-         /* b2 */ coef[2] = coef[0];
-         /* a1 */ coef[3] = (-2.0 * cosW0) * scale;
-         /* a2 */ coef[4] = (1.0 - alpha) * scale;
-         setCoefficients(stage, coef);
-     }
-     void setLowShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t a = pow(10.0, gain/40.0f);
-         Serial.printf("LowShelf Gain a = %f\n", a);
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         //sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
-         sample_t cosW0 = cos(w0);
-         //generate three helper-values (intermediate results):
-         sample_t ss = (a*a+1.0)*(1.0/(sample_t)slope-1.0)+2.0*a;
-         if(ss < 0.0) {
+    }
+
+    // Compute common filter functions
+    // http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
+    void setLowpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071f)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        double w0 = frequency * (2 * 3.141592654 / AudioController::getSampleRate());
+        double sinW0 = sin(w0);
+        double alpha = sinW0 / ((double)q * 2.0);
+        double cosW0 = cos(w0);
+        double scale = 1.0 / (1.0 + alpha); // which is equal to 1.0 / a0
+        /* b0 */ c[0] = ((1.0 - cosW0) / 2.0) * scale;
+        /* b1 */ c[1] = (1.0 - cosW0) * scale;
+        /* b2 */ c[2] = c[0];
+        /* a1 */ c[3] = (-2.0 * cosW0) * scale;
+        /* a2 */ c[4] = (1.0 - alpha) * scale;
+        setCoefficients(stage, c);
+    }
+    void setHighpass(uint32_t stage, sample_t frequency, sample_t q = 0.7071)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        double w0 = frequency * (2 * 3.141592654 / AudioController::getSampleRate());
+        double sinW0 = sin(w0);
+        double alpha = sinW0 / ((double)q * 2.0);
+        double cosW0 = cos(w0);
+        double scale = 1.0 / (1.0 + alpha);
+        /* b0 */ c[0] = ((1.0 + cosW0) / 2.0) * scale;
+        /* b1 */ c[1] = -(1.0 + cosW0) * scale;
+        /* b2 */ c[2] = c[0];
+        /* a1 */ c[3] = (-2.0 * cosW0) * scale;
+        /* a2 */ c[4] = (1.0 - alpha) * scale;
+        setCoefficients(stage, c);
+    }
+    void setBandpass(uint32_t stage, sample_t frequency, sample_t q = 1.0)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        double w0 = frequency * (2 * 3.141592654 / AudioController::getSampleRate());
+        double sinW0 = sin(w0);
+        double alpha = sinW0 / ((double)q * 2.0);
+        double cosW0 = cos(w0);
+        double scale = 1.0 / (1.0 + alpha);
+        /* b0 */ c[0] = alpha * scale;
+        /* b1 */ c[1] = 0;
+        /* b2 */ c[2] = (-alpha) * scale;
+        /* a1 */ c[3] = (-2.0 * cosW0) * scale;
+        /* a2 */ c[4] = (1.0 - alpha) * scale;
+        setCoefficients(stage, c);
+    }
+    void setNotch(uint32_t stage, sample_t frequency, sample_t q = 1.0)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        double w0 = frequency * (2 * 3.141592654 / AudioController::getSampleRate());
+        double sinW0 = sin(w0);
+        double alpha = sinW0 / ((double)q * 2.0);
+        double cosW0 = cos(w0);
+        double scale = 1.0 / (1.0 + alpha); // which is equal to 1.0 / a0
+        /* b0 */ c[0] = scale;
+        /* b1 */ c[1] = (-2.0 * cosW0) * scale;
+        /* b2 */ c[2] = c[0];
+        /* a1 */ c[3] = (-2.0 * cosW0) * scale;
+        /* a2 */ c[4] = (1.0 - alpha) * scale;
+        setCoefficients(stage, c);
+    }
+    void setLowShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        double a = pow(10.0, gain / 40.0);
+        double w0 = frequency * (2 * 3.141592654 / AudioController::getSampleRate());
+        double sinW0 = sin(w0);
+        // double alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
+        double cosW0 = cos(w0);
+        // generate three helper-values (intermediate results):
+        double sinsq = sinW0 * sqrt((pow(a, 2.0) + 1.0) * (1.0 / slope - 1.0) + 2.0 * a);
+        double aMinus = (a - 1.0) * cosW0;
+        double aPlus = (a + 1.0) * cosW0;
+        double scale = 1.0 / ((a + 1.0) + aMinus + sinsq);
+        /* b0 */ c[0] = a * ((a + 1.0) - aMinus + sinsq) * scale;
+        /* b1 */ c[1] = 2.0 * a * ((a - 1.0) - aPlus) * scale;
+        /* b2 */ c[2] = a * ((a + 1.0) - aMinus - sinsq) * scale;
+        /* a1 */ c[3] = -2.0 * ((a - 1.0) + aPlus) * scale;
+        /* a2 */ c[4] = ((a + 1.0) + aMinus - sinsq) * scale;
+        setCoefficients(stage, c);
+    }
+    void setHighShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        sample_t a = pow(10.0, gain / 40.0f);
+        sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
+        sample_t sinW0 = sin(w0);
+        // sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
+        sample_t cosW0 = cos(w0);
+        // generate three helper-values (intermediate results):
+        sample_t ss = (a * a + 1.0) * (1.0 / (sample_t)slope - 1.0) + 2.0 * a;
+        if (ss < 0.0)
+        {
             // Avoid taking the square root of a negative number
-            return; // invalid parameter combination
-         }
-         sample_t sinsq = sinW0 * sqrt( ss );
-         sample_t aMinus = (a-1.0)*cosW0;
-         sample_t aPlus = (a+1.0)*cosW0;
-         sample_t scale = 1.0 / ( (a+1.0) + aMinus + sinsq);
-         #ifdef VERBOSE
-         // Print all pre-calculated values for debugging
-         Serial.printf("LowShelf Filter Stage %d:\n", stage);
-            Serial.printf("  a = %f\n", a);
-            Serial.printf("  w0 = %f\n", w0);
-            Serial.printf("  sinW0 = %f\n", sinW0);
-            Serial.printf("  cosW0 = %f\n", cosW0);
-            Serial.printf("  sinsq = %f\n", sinsq);
-            Serial.printf("  aMinus = %f\n", aMinus);
-            Serial.printf("  aPlus = %f\n", aPlus);
-            Serial.printf("  scale = %f\n", scale);
-        #endif
+            return;
+        }
+        double sinsq = sinW0 * sqrt(ss);
+        double aMinus = (a - 1.0) * cosW0;
+        double aPlus = (a + 1.0) * cosW0;
+        double scale = 1.0 / ((a + 1.0) + aMinus + sinsq);
+        /* b0 */ c[0] = a * ((a + 1.0) - aMinus + sinsq) * scale;
+        /* b1 */ c[1] = -2.0 * a * ((a - 1.0) - aPlus) * scale;
+        /* b2 */ c[2] = a * ((a + 1.0) - aMinus - sinsq) * scale;
+        /* a1 */ c[3] = 2.0 * ((a - 1.0) + aPlus) * scale;
+        /* a2 */ c[4] = ((a + 1.0) + aMinus - sinsq) * scale;
+        setCoefficients(stage, c);
+    }
 
-         /* b0 */ coef[0] =		a *	( (a+1.0) - aMinus + sinsq	) * scale;
-         /* b1 */ coef[1] =  2.0*a * ( (a-1.0) - aPlus  			) * scale;
-         /* b2 */ coef[2] =		a * ( (a+1.0) - aMinus - sinsq 	) * scale;
-         /* a1 */ coef[3] = -2.0*	( (a-1.0) + aPlus			) * scale;
-         /* a2 */ coef[4] =  		( (a+1.0) + aMinus - sinsq	) * scale;
-         #ifdef VERBOSE
-         Serial.printf("LowShelf Coefficients for stage %d:\n", stage);
-         for(int i=0; i<STAGE_COEFFICIENTS; i++) {
-            Serial.printf("  coef[%d] = %f\n", i, coef[i]);
-         }  
-         #endif
-         Serial.println();
-         setCoefficients(stage, coef);
-     }
-     void setHighShelf(uint32_t stage, sample_t frequency, sample_t gain, sample_t slope = 1.0f) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t a = pow(10.0, gain/40.0f);
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         //sample_t alpha = (sinW0 * sqrt((a+1/a)*(1/slope-1)+2) ) / 2.0;
-         sample_t cosW0 = cos(w0);
-         //generate three helper-values (intermediate results):
-         sample_t ss = (a*a+1.0)*(1.0/(sample_t)slope-1.0)+2.0*a;
-         if(ss < 0.0) {
-            // Avoid taking the square root of a negative number
-            return; 
-         }
-         sample_t sinsq = sinW0 * sqrt(ss);
-         sample_t aMinus = (a-1.0)*cosW0;
-         sample_t aPlus = (a+1.0)*cosW0;
-         sample_t scale = 1.0 / ( (a+1.0) - aMinus + sinsq);
-         /* b0 */ coef[0] =		a *	( (a+1.0) + aMinus + sinsq	) * scale;
-         /* b1 */ coef[1] = -2.0*a * ( (a-1.0) + aPlus  			) * scale;
-         /* b2 */ coef[2] =		a * ( (a+1.0) + aMinus - sinsq 	) * scale;
-         /* a1 */ coef[3] =  2.0*	( (a-1.0) - aPlus			) * scale;
-         /* a2 */ coef[4] =  		( (a+1.0) - aMinus - sinsq	) * scale;
-         setCoefficients(stage, coef);
-     }
+    void setPeakingEQ(uint32_t stage, sample_t frequency, sample_t q, sample_t gain)
+    {
+        sample_t c[STAGE_COEFFICIENTS];
+        sample_t a = pow(10.0, gain / 40.0f);
+        sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
+        sample_t sinW0 = sin(w0);
+        sample_t alpha = sinW0 / (q * 2.0f);
+        sample_t cosW0 = cos(w0);
+        sample_t scale = 1.0 / (1.0 + alpha / a);
+        /* b0 */ c[0] = (1.0 + alpha * a) * scale;
+        /* b1 */ c[1] = (-2.0 * cosW0) * scale;
+        /* b2 */ c[2] = (1.0 - alpha * a) * scale;
+        /* a1 */ c[3] = (-2.0 * cosW0) * scale;
+        /* a2 */ c[4] = (1.0 - alpha / a) * scale;
+        setCoefficients(stage, c);
+    }
 
-     void setPeakingEQ(uint32_t stage, sample_t frequency, sample_t q, sample_t gain) {
-         sample_t coef[STAGE_COEFFICIENTS];
-         sample_t a = pow(10.0, gain/40.0f);
-         sample_t w0 = frequency * (2.0f * 3.141592654f / AudioController::getSampleRate());
-         sample_t sinW0 = sin(w0);
-         sample_t alpha = sinW0 / (q * 2.0f);
-         sample_t cosW0 = cos(w0);
-         sample_t scale = 1.0 / (1.0 + alpha / a);
-         /* b0 */ coef[0] = (1.0 + alpha * a) * scale;
-         /* b1 */ coef[1] = (-2.0 * cosW0) * scale; 
-         /* b2 */ coef[2] = (1.0 - alpha * a) * scale;
-         /* a1 */ coef[3] = (-2.0 * cosW0) * scale;
-         /* a2 */ coef[4] = (1.0 - alpha / a) * scale; 
-         //for(int i=0; i<STAGE_COEFFICIENTS; i++) {
-            //Serial.printf("coef[%d] = %f\n", i, coef[i]);
-         //}
-         setCoefficients(stage, coef);
-     }
-
-     void bypass(uint32_t stage) {
+    void bypass(uint32_t stage)
+    {
         setCoefficients(stage, identityCoefficients);
     }
 
- //private:
-     sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
-     sample_t state[2 * MAX_BIQUAD_STAGES];
-     uint32_t num_stages = 0; // number of stages in use
-     void processChannel(sample_t* input, sample_t* output);
- };
- 
- #endif
- 
+    // private:
+    sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
+    sample_t state[4 * MAX_BIQUAD_STAGES];
+    uint32_t num_stages = 0; // number of stages in use
+    arm_biquad_casd_df1_inst_f32 iir_inst;
+    void processChannel(sample_t *input, sample_t *output);
+};
+
+#endif

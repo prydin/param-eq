@@ -16,7 +16,6 @@ void AudioController::process(AudioBuffer* block) {
 }
 void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
 {
-    Serial.println("AudioController::processAudio called");
     AudioBuffer* buffer = AudioBufferPool::getInstance().getBuffer();
     
     // Convert inputs from int32 to float
