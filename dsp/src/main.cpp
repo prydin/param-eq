@@ -336,6 +336,16 @@ void setup(void)
  */
 void loop(void)
 {
+  static time_t nextStatusPrint = 0;
+  time_t currentTime = millis(); 
+
+  // Print CPU load every 2 seconds
+  if (currentTime >= nextStatusPrint)
+  {
+    //Serial.printf("CPU Load: %.2f%%\n", Timers::GetCpuLoad() * 100.0f);
+    nextStatusPrint = currentTime + 2000; // Print every 2 seconds
+  }
+
   // Tick rotary encoders
   FilterSettings *settings = &filterSettings[selectedFilterBand];
   int oldFilterType = settings->type;

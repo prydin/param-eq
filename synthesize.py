@@ -45,7 +45,7 @@ def shelving_filter(fc, fs, Q, G, high):
 #(b, a) = peaking_filter(fc, fs, Q, G)
 
 
-[b, a] = shelving_filter(fc, fs, Q, 1, high=False)
+[b, a] = peaking_filter(1440, 48000, 3.50, 6.70)
 sos = scipy.signal.tf2sos(b, a)
 for section in sos:
     print(f"{section[0]:.12e}, {section[1]:.12e}, {section[2]:.12e}, {section[4]:.12e}, {section[5]:.12e},")

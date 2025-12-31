@@ -5,11 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8f2a06c9-747f-4794-ac64-a5d40c63dfb5" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/common/packets.h" beforeDir="false" afterPath="$PROJECT_DIR$/common/packets.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dsp/src/filter_biquad_f.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/filter_biquad_f.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dsp/src/filter_biquad_f.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/filter_biquad_f.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/param-eq.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/param-eq.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/Teensy4i2s/src/Teensy4i2s.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/Teensy4i2s/src/Teensy4i2s.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/Teensy4i2s.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/Teensy4i2s.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/audio_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/audio_buffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/base.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/base.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dsp/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dsp/src/persistence.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/persistence.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/synthesize.py" beforeDir="false" afterPath="$PROJECT_DIR$/synthesize.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -34,19 +38,20 @@
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="36aaFvQFaHdEy4uhGMRBmdzAVOe" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.synthesize.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.synthesize.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "float-pipeline",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/proj/param-eq"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="synthesize" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="param-eq" />
@@ -79,7 +84,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-d68999036c7f-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.14475.56" />
+        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
       </set>
     </attachedChunks>
   </component>

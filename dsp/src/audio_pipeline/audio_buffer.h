@@ -33,9 +33,9 @@ public:
 
     AudioBuffer *getBuffer();
     AudioBuffer *clone(AudioBuffer *source);
-    static AudioBufferPool &getInstance(size_t poolSize = 16)
+    static AudioBufferPool &getInstance()
     {
-        static AudioBufferPool instance(poolSize);
+        static AudioBufferPool instance(BUFFER_POOL_SIZE);
         return instance;
     }
 
@@ -50,6 +50,11 @@ private:
 
 inline void AudioBuffer::release()
 {
+    if(refCount <= 0)
+    {
+        Serial.println("PANIC: AudioBuffer: release() called on buffer with refCount <= 0");
+        return;
+    }
     if(--refCount == 0)
     {
         AudioBufferPool::getInstance().releaseBuffer(this);
