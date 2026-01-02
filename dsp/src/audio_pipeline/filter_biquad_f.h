@@ -1,19 +1,13 @@
 #ifndef filter_biquad_f_h_
 #define filter_biquad_f_h_
 
-#define USE_ARM_DSP
-
 #include <Arduino.h>
 #include "audio_controller.h"
 #include "arm_math.h"
 
 #define MAX_BIQUAD_STAGES 4
 #define STAGE_COEFFICIENTS 5
-#ifdef USE_ARM_DSP
 #define NUM_STATES 4
-#else
-#define NUM_STATES 2
-#endif
 
 typedef float sample_t;
 
@@ -39,13 +33,13 @@ public:
         if (stage + 1 > num_stages)
         {
             num_stages = stage + 1;
+            for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
+            {
+                arm_biquad_cascade_df1_init_f32(&iir_state[ch], num_stages, coeff, state[ch]);
+            }
         }
-        Serial.printf("Set Biquad Stage %d out of %d Coefficients: b0=%f b1=%f b2=%f a1=%f a2=%f\n",
-                      stage, num_stages, c[0], c[1], c[2], c[3], c[4]);
-        for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
-        {
-            arm_biquad_cascade_df1_init_f32(&iir_state[ch], num_stages, coeff, state[ch]);
-        }
+        //Serial.printf("Set Biquad Stage %d out of %d Coefficients: b0=%f b1=%f b2=%f a1=%f a2=%f\n",
+        //              stage, num_stages, c[0], c[1], c[2], c[3], c[4]);
         __enable_irq();
         // Serial.printf("num_stages = %d\n", num_stages);
     }

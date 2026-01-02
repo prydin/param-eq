@@ -5,16 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8f2a06c9-747f-4794-ac64-a5d40c63dfb5" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/param-eq.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/param-eq.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dsp/Teensy4i2s/src/Teensy4i2s.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/Teensy4i2s/src/Teensy4i2s.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/Teensy4i2s.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/Teensy4i2s.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/Teensy4i2s.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/Teensy4i2s.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/audio_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/audio_buffer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/base.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/base.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/input_i2s.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/input_i2s.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/input_i2s.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/input_i2s.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/output_i2s.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/output_i2s.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/output_i2s.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/lib/Teensy4i2s/src/output_i2s.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.h" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/audio_pipeline/filter_biquad_f.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dsp/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dsp/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/synthesize.py" beforeDir="false" afterPath="$PROJECT_DIR$/synthesize.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

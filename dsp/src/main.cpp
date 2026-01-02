@@ -135,8 +135,8 @@ void updateDisplay()
     packet.data.coeffs[i].b0 = htonf(coeffs[0]);
     packet.data.coeffs[i].b1 = htonf(coeffs[1]);
     packet.data.coeffs[i].b2 = htonf(coeffs[2]);
-    packet.data.coeffs[i].a1 = htonf(coeffs[3]);
-    packet.data.coeffs[i].a2 = htonf(coeffs[4]);
+    packet.data.coeffs[i].a1 = htonf(-coeffs[3]);
+    packet.data.coeffs[i].a2 = htonf(-coeffs[4]);
   }
   sendToDisplay(&packet);
 
@@ -208,7 +208,7 @@ void updateAllFilters()
  * @brief Initializes the audio processing system, UI controls, and hardware interfaces.
  *
  * This function sets up the following components:
- * - Serial communication at 115000 baud
+  * - Serial communication at 115000 baud
  * - Audio memory allocation (12 blocks)
  * - Waveform generator configured as square wave at 980 Hz with 0.3 amplitude
  * - Rotary encoder pins for frequency control (FC), gain, Q factor, and filter index
@@ -227,18 +227,19 @@ void setup(void)
 
   // Build audio pipeline
   // Source -> Gain -> Filter -> I2S
-  waveform.setAmplitude(0.5f);
-  waveform.setFrequency(980.0f); // 980 Hz test tone
-  waveform.addReceiver(&gain);
   gain.addReceiver(&filter);
   filter.addReceiver(AudioController::getInstance());
 
   AudioController::getInstance()->addReceiver(&waveform);
   gain.setGain(0.5f); // Reduce volume to avoid clipping
-  InitI2s();
-
+  
+  InitI2s(true);
+  waveform.setAmplitude(0.5f);
+  waveform.setFrequency(980.0f); // 980 Hz test tone
+  waveform.addReceiver(&gain);
+  
   // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
-  delay(1000);
+  delay(100);
   
   // Initialize UI
   // Set all the rotary encoder pints to input mode
@@ -342,7 +343,7 @@ void loop(void)
   // Print CPU load every 2 seconds
   if (currentTime >= nextStatusPrint)
   {
-    //Serial.printf("CPU Load: %.2f%%\n", Timers::GetCpuLoad() * 100.0f);
+    Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz\n", Timers::GetCpuLoad() * 100.0f, AudioController::getSampleRate());
     nextStatusPrint = currentTime + 2000; // Print every 2 seconds
   }
 

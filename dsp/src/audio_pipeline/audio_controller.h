@@ -15,12 +15,12 @@ public:
     }   
 
     static uint32_t getSampleRate() {
-        return sampleRate;
+        Serial.println("AudioController::getSampleRate called");
+        return audioInputI2S ? audioInputI2S->getMeasuredSampleRate() : 44100;
     }
 private:
     AudioController();
     int32_t outputs[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES];
-    static const uint32_t sampleRate = 48000;
 };
 
 #endif // AUDIO_CONTROLLER_H
