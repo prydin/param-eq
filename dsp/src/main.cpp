@@ -230,13 +230,14 @@ void setup(void)
   gain.addReceiver(&filter);
   filter.addReceiver(AudioController::getInstance());
 
-  AudioController::getInstance()->addReceiver(&waveform);
+  //AudioController::getInstance()->addReceiver(&waveform);
+  AudioController::getInstance()->addReceiver(&gain);
   gain.setGain(0.5f); // Reduce volume to avoid clipping
   
   InitI2s(true);
   waveform.setAmplitude(0.5f);
   waveform.setFrequency(980.0f); // 980 Hz test tone
-  waveform.addReceiver(&gain);
+  //waveform.addReceiver(&gain);
   
   // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
   delay(100);
@@ -251,6 +252,9 @@ void setup(void)
   pinMode(FILTER_INDEX_PIN, INPUT);
   pinMode(Q_PIN_A, INPUT);
   pinMode(Q_PIN_B, INPUT);
+
+  // Initialize clip LED
+  pinMode(LED_BUILTIN, OUTPUT);
 
   // Set up pushbuttons
   filterTypeSelectButton.attachPress([]()
@@ -343,7 +347,7 @@ void loop(void)
   // Print CPU load every 2 seconds
   if (currentTime >= nextStatusPrint)
   {
-    Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz\n", Timers::GetCpuLoad() * 100.0f, AudioController::getSampleRate());
+    Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s\n", Timers::GetCpuLoad() * 100.0f, AudioController::getStandardizedSampleRate(), AudioController::isSampleRateStable() ? "true" : "false");
     nextStatusPrint = currentTime + 2000; // Print every 2 seconds
   }
 

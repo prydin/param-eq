@@ -27,9 +27,9 @@ GraphWidget gr = GraphWidget(&tft);
 TraceWidget tr = TraceWidget(&gr);
 
 #define MAX_GRAPH_FREQUENCY 20000.0 // Maximum frequency for graph x axis
-#define MIN_GRAPH_FREQUENCY 0.0     // Minimum frequency for graph x axis
-#define MIN_GRAPH_AMPLITUDE -15.0   // Minimum amplitude for graph y axis
-#define MAX_GRAPH_AMPLITUDE 15.0    // Maximum amplitude for graph y axis
+#define MIN_GRAPH_FREQUENCY 2.0      // Minimum frequency for graph x axis
+#define MIN_GRAPH_AMPLITUDE -15.0    // Minimum amplitude for graph y axis
+#define MAX_GRAPH_AMPLITUDE 15.0     // Maximum amplitude for graph y axis
 
 #define COL_BACKGROUND 0
 #define COL_TEXT_BACKGROUND 1
@@ -80,22 +80,20 @@ void initGraph()
   gr.createGraph(235, 150, tft.color565(5, 5, 5));
 
   // x scale units is from 0 to 100, y scale units is -50 to 50
-  gr.setGraphScale(0, MAX_GRAPH_FREQUENCY + 1, MIN_GRAPH_AMPLITUDE, MAX_GRAPH_AMPLITUDE);
+  gr.setGraphScale(log10(MIN_GRAPH_FREQUENCY), log10(MAX_GRAPH_FREQUENCY), MIN_GRAPH_AMPLITUDE, MAX_GRAPH_AMPLITUDE);
 
   // X grid starts at 0 with lines every 10 x-scale units
   // Y grid starts at -50 with lines every 25 y-scale units
   // blue grid
-  gr.setGraphGrid(0, 4000, MIN_GRAPH_AMPLITUDE, 5.0, colors[COL_GRID]);
+  gr.setGraphGrid(log10(MIN_GRAPH_FREQUENCY), 1, MIN_GRAPH_AMPLITUDE, 5.0, colors[COL_GRID]);
 
   // Draw the x axis scale
   tft.setTextDatum(TC_DATUM); // Top centre text datum
-  tft.drawNumber(0, gr.getPointX(0) + 43, gr.getPointY(-15.0) + 13);
-  tft.drawNumber(4000, gr.getPointX(4000) + 43, gr.getPointY(-15.0) + 13);
-  tft.drawNumber(8000, gr.getPointX(8000) + 43, gr.getPointY(-15.0) + 13);
-  tft.drawNumber(12000, gr.getPointX(12000) + 43, gr.getPointY(-15.0) + 13);
-  tft.drawNumber(16000, gr.getPointX(16000) + 43, gr.getPointY(-15.0) + 13);
-  tft.drawNumber(20000, gr.getPointX(20000) + 43, gr.getPointY(-15.0) + 13);
-
+  tft.drawNumber(2, gr.getPointX(log10(2)) + 43, gr.getPointY(-15.0) + 13);
+  tft.drawNumber(20, gr.getPointX(log10(20)) + 43, gr.getPointY(-15.0) + 13);
+  tft.drawNumber(200, gr.getPointX(log10(200)) + 43, gr.getPointY(-15.0) + 13);
+  tft.drawNumber(2000, gr.getPointX(log10(2000)) + 43, gr.getPointY(-15.0) + 13);
+  tft.drawNumber(20000, gr.getPointX(log10(20000)) + 43, gr.getPointY(-15.0) + 13);
   // Draw the y axis scale
   tft.setTextDatum(MR_DATUM); // Middle right text datum
   tft.drawNumber(-15, gr.getPointX(0.0) + 32, gr.getPointY(-15.0) + 13);
@@ -162,7 +160,12 @@ void updateGraph(float *x, float *y, int length)
   // Add the new line to the graph in yellow
   for (int i = 0; i < length - 1; i++)
   {
-    tr.addPoint(x[i], y[i]);
+    float f = x[i];
+    if (f > SAMPLE_FREQ / 2.0f)
+    {
+      break;
+    }
+    tr.addPoint(log10(f), y[i]);
   }
 }
 
@@ -180,10 +183,9 @@ void updateFilterCoeffs(Packet *packet)
   const int dataLength = 100;
   float freqResponse[dataLength];
   float freq[dataLength];
-  const float maxFreq = 20000.0f;
 
   // Extract filter coefficients into variables
-  for(int i = 0; i< FILTER_BANDS; i++)
+  for (int i = 0; i < FILTER_BANDS; i++)
   {
     float b0 = ntohf(packet->data.coeffs[i].b0);
     float b1 = ntohf(packet->data.coeffs[i].b1);
@@ -191,23 +193,25 @@ void updateFilterCoeffs(Packet *packet)
     float a1 = ntohf(packet->data.coeffs[i].a1);
     float a2 = ntohf(packet->data.coeffs[i].a2);
     Serial.printf("Band %d Coefficients: b0=%f, b1=%f, b2=%f, a1=%f, a2=%f\n", i, b0, b1, b2, a1, a2);
-    }
+  }
 
-  for (int i = 1; i < dataLength; i++)
+  float logStep = (log10(MAX_GRAPH_FREQUENCY) - log10(MIN_GRAPH_FREQUENCY)) / float(dataLength - 1);
+  float logMinFreq = log10(MIN_GRAPH_FREQUENCY);
+  for (int i = 0; i < dataLength; i++)
   {
-    freq[i] = float(i) / float(dataLength) * maxFreq;
+    freq[i] = exp10(i * logStep + logMinFreq);
 
     // Initialize frequency response
-    if(packet->displayMode == DISPLAY_MODE_COMBINED)
+    if (packet->displayMode == DISPLAY_MODE_COMBINED)
     {
       freqResponse[i] = 0.0f;
-      for(int j = 0; j < FILTER_BANDS; j++)
+      for (int j = 0; j < FILTER_BANDS; j++)
       {
         float b0 = ntohf(packet->data.coeffs[j].b0);
         float b1 = ntohf(packet->data.coeffs[j].b1);
         float b2 = ntohf(packet->data.coeffs[j].b2);
         float a1 = ntohf(packet->data.coeffs[j].a1);
-        float a2 = ntohf(packet->data.coeffs[j].a2);  
+        float a2 = ntohf(packet->data.coeffs[j].a2);
         freqResponse[i] += getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
         // Serial.printf("Freq: %.2f Hz, Band %d Gain: %.2f dB\n", freq[i], j, getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2));
       }
@@ -219,7 +223,7 @@ void updateFilterCoeffs(Packet *packet)
       float b1 = ntohf(packet->data.coeffs[index].b1);
       float b2 = ntohf(packet->data.coeffs[index].b2);
       float a1 = ntohf(packet->data.coeffs[index].a1);
-      float a2 = ntohf(packet->data.coeffs[index].a2);  
+      float a2 = ntohf(packet->data.coeffs[index].a2);
       freqResponse[i] = getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
     }
   }
@@ -284,10 +288,10 @@ void loop()
   }
   switch (packet->packetType)
   {
-  case PACKET_COEFFS: 
+  case PACKET_COEFFS:
     updateFilterCoeffs(packet);
     break;
-  case PACKET_PARAMS: 
+  case PACKET_PARAMS:
     updateFilterParameters(packet);
     break;
   default:
