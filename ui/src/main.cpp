@@ -27,9 +27,9 @@ GraphWidget gr = GraphWidget(&tft);
 TraceWidget tr = TraceWidget(&gr);
 
 #define MAX_GRAPH_FREQUENCY 20000.0 // Maximum frequency for graph x axis
-#define MIN_GRAPH_FREQUENCY 2.0      // Minimum frequency for graph x axis
-#define MIN_GRAPH_AMPLITUDE -15.0    // Minimum amplitude for graph y axis
-#define MAX_GRAPH_AMPLITUDE 15.0     // Maximum amplitude for graph y axis
+#define MIN_GRAPH_FREQUENCY 2.0     // Minimum frequency for graph x axis
+#define MIN_GRAPH_AMPLITUDE -15.0   // Minimum amplitude for graph y axis
+#define MAX_GRAPH_AMPLITUDE 15.0    // Maximum amplitude for graph y axis
 
 #define COL_BACKGROUND 0
 #define COL_TEXT_BACKGROUND 1
@@ -39,7 +39,9 @@ TraceWidget tr = TraceWidget(&gr);
 #define COL_GRAPH_BACKGROUND 5
 #define COL_ENABLED 6
 #define COL_DISABLED 7
-#define NUM_COLORS 8
+#define COL_ALERT 8
+
+#define NUM_COLORS 9
 
 #define NUM_FILTERS 3
 
@@ -58,7 +60,8 @@ uint16_t darkMode[NUM_COLORS] = {
     TFT_YELLOW,            // TRACE
     tft.color565(5, 5, 5), //  GRAPH_BACKGROUND
     TFT_GREEN,             // ENABLED
-    TFT_GREY               // DISABLED
+    TFT_GREY,              // DISABLED
+    TFT_RED                // ALERT
 };
 
 uint16_t lightMode[NUM_COLORS] = {
@@ -69,7 +72,8 @@ uint16_t lightMode[NUM_COLORS] = {
     TFT_YELLOW,            // TRACE
     tft.color565(5, 5, 5), // GRAPH_BACKGROUND
     TFT_GREEN,             // ENABLED
-    tft.color565(5, 5, 5)  // DISABLED
+    tft.color565(5, 5, 5), // DISABLED
+    TFT_RED                // ALERT
 };
 
 uint16_t *colors = darkMode;
@@ -151,11 +155,31 @@ void updateUserSettings(int filterType, int filterIndex, int displayMode)
   tft.print("SUM");
 }
 
-void updateGraph(float *x, float *y, int length)
+void updateClipAlert(bool clipped)
+{
+  tft.setTextSize(2);
+  // Update dislay mode
+  if (clipped)
+  {
+    tft.setTextColor(colors[COL_BACKGROUND], colors[COL_ALERT]);
+  }
+  else
+  {
+    tft.setTextColor(colors[COL_BACKGROUND], colors[COL_DISABLED]);
+  }
+
+  tft.setCursor(280, 10);
+  tft.print("CLP");
+}
+
+void updateGraph(float *x, float *y, int length, uint16_t color, bool clearPrevious)
 {
   // Clear the previous graph by redrawing the background
-  gr.drawGraph(40, 10);
-  tr.startTrace(TFT_CYAN);
+  if (clearPrevious)
+  {
+    gr.drawGraph(40, 10);
+  }
+  tr.startTrace(color);
 
   // Add the new line to the graph in yellow
   for (int i = 0; i < length - 1; i++)
@@ -184,17 +208,6 @@ void updateFilterCoeffs(Packet *packet)
   float freqResponse[dataLength];
   float freq[dataLength];
 
-  // Extract filter coefficients into variables
-  for (int i = 0; i < FILTER_BANDS; i++)
-  {
-    float b0 = ntohf(packet->data.coeffs[i].b0);
-    float b1 = ntohf(packet->data.coeffs[i].b1);
-    float b2 = ntohf(packet->data.coeffs[i].b2);
-    float a1 = ntohf(packet->data.coeffs[i].a1);
-    float a2 = ntohf(packet->data.coeffs[i].a2);
-    Serial.printf("Band %d Coefficients: b0=%f, b1=%f, b2=%f, a1=%f, a2=%f\n", i, b0, b1, b2, a1, a2);
-  }
-
   float logStep = (log10(MAX_GRAPH_FREQUENCY) - log10(MIN_GRAPH_FREQUENCY)) / float(dataLength - 1);
   float logMinFreq = log10(MIN_GRAPH_FREQUENCY);
   for (int i = 0; i < dataLength; i++)
@@ -202,35 +215,45 @@ void updateFilterCoeffs(Packet *packet)
     freq[i] = exp10(i * logStep + logMinFreq);
 
     // Initialize frequency response
-    if (packet->displayMode == DISPLAY_MODE_COMBINED)
+    int index = packet->selectedFilterBand;
+    float b0 = ntohf(packet->data.filters.coeffs[index].b0);
+    float b1 = ntohf(packet->data.filters.coeffs[index].b1);
+    float b2 = ntohf(packet->data.filters.coeffs[index].b2);
+    float a1 = ntohf(packet->data.filters.coeffs[index].a1);
+    float a2 = ntohf(packet->data.filters.coeffs[index].a2);
+    freqResponse[i] = getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
+  }
+  updateGraph(freq, freqResponse, dataLength, TFT_CYAN, true);
+
+  if (packet->displayMode == DISPLAY_MODE_COMBINED)
+  {
+    for (int i = 0; i < dataLength; i++)
     {
+      freq[i] = exp10(i * logStep + logMinFreq);
+
       freqResponse[i] = 0.0f;
       for (int j = 0; j < FILTER_BANDS; j++)
       {
-        float b0 = ntohf(packet->data.coeffs[j].b0);
-        float b1 = ntohf(packet->data.coeffs[j].b1);
-        float b2 = ntohf(packet->data.coeffs[j].b2);
-        float a1 = ntohf(packet->data.coeffs[j].a1);
-        float a2 = ntohf(packet->data.coeffs[j].a2);
+        float b0 = ntohf(packet->data.filters.coeffs[j].b0);
+        float b1 = ntohf(packet->data.filters.coeffs[j].b1);
+        float b2 = ntohf(packet->data.filters.coeffs[j].b2);
+        float a1 = ntohf(packet->data.filters.coeffs[j].a1);
+        float a2 = ntohf(packet->data.filters.coeffs[j].a2);
         freqResponse[i] += getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
         // Serial.printf("Freq: %.2f Hz, Band %d Gain: %.2f dB\n", freq[i], j, getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2));
       }
     }
-    else
+    // Add master gain
+    float masterGain = ntohf(packet->data.filters.masterGain);
+    for (int i = 0; i < dataLength; i++)
     {
-      int index = packet->selectedFilterBand;
-      float b0 = ntohf(packet->data.coeffs[index].b0);
-      float b1 = ntohf(packet->data.coeffs[index].b1);
-      float b2 = ntohf(packet->data.coeffs[index].b2);
-      float a1 = ntohf(packet->data.coeffs[index].a1);
-      float a2 = ntohf(packet->data.coeffs[index].a2);
-      freqResponse[i] = getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
+      freqResponse[i] += masterGain;
     }
+    updateGraph(freq, freqResponse, dataLength, TFT_LIGHTGREY, false);
   }
-  updateGraph(freq, freqResponse, dataLength);
 }
 
-void updateFilterParameters(Packet *packet)
+void updateFilterParameters(Packet *packet, float masterGain)
 {
   // Extract set gain, Q and frequency
   int index = packet->selectedFilterBand;
@@ -240,12 +263,16 @@ void updateFilterParameters(Packet *packet)
   float frequency = ntohf(packet->data.params[index].frequency);
   tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background
   tft.setTextSize(1);
-  tft.setCursor(10, 180);
+/*  tft.setCursor(10, 180);
   tft.printf("Gain: %.2f dB  ", gain);
   tft.setCursor(120, 180);
-  tft.printf("Q: %.2f", Q);
-  tft.setCursor(190, 180);
-  tft.printf("Freq: %.2f Hz  ", frequency);
+  tft.printf("Q: %.2f", Q); */
+  tft.fillRect(40, 172, 320-40, 22, colors[COL_TEXT_BACKGROUND]); // Clear area
+  tft.setTextDatum(TC_DATUM); // Top centre text datum
+  tft.setCursor(gr.getPointX(log10(frequency)), 172);
+  tft.printf("^");
+  tft.setCursor(gr.getPointX(log10(frequency)) - 5, 180);
+  tft.printf("%.0f", frequency);
   updateUserSettings(filterType, int(index), packet->displayMode);
 }
 
@@ -281,6 +308,7 @@ void setup()
 
 void loop()
 {
+  static float masterGain = 0.0f;
   Packet *packet = popPacket();
   if (packet == NULL)
   {
@@ -290,9 +318,17 @@ void loop()
   {
   case PACKET_COEFFS:
     updateFilterCoeffs(packet);
+    masterGain = ntohf(packet->data.filters.masterGain);
     break;
   case PACKET_PARAMS:
-    updateFilterParameters(packet);
+    updateFilterParameters(packet, masterGain);
+    break;
+  case PACKET_CLIP_ALERT:
+    updateClipAlert(packet->data.clipAlert.clipped);
+    if (packet->data.clipAlert.clipped)
+    {
+      Serial.println("Clipping detected!");
+    }
     break;
   default:
     Serial.println("Unknown packet type received");

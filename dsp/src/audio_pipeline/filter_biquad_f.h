@@ -9,7 +9,6 @@
 #define STAGE_COEFFICIENTS 5
 #define NUM_STATES 4
 
-#define PI 3.14159265358979f
 #define TWO_PI (2.0f * PI)
 
 typedef float sample_t;
