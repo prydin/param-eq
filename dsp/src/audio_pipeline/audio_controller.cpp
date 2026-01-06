@@ -8,10 +8,25 @@ AudioController::AudioController() : AudioComponent() {
 
 void AudioController::process(AudioBuffer* block) {
     // This is the final destination - convert samples to int32 for output
+    static bool wasClipped = false;
+    bool clipped = false;
     for(int ch = 0; ch < AUDIO_CHANNELS; ch++) {
         for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-            outputs[ch][i] = (int32_t)(max(-1.0f, min(1.0f, block->data[ch][i])) * 2147483647.0f);
+            sample_t sample  = block->data[ch][i];
+            clipped |= (sample > 1.0f) || (sample < -1.0f);
+            outputs[ch][i] = (int32_t)(max(-1.0f, min(1.0f, sample)) * 2147483647.0f);
         }
+    }
+    if(clipped && !wasClipped) {
+        if(clipDetector) {
+            clipDetector(true);
+        }
+        wasClipped = true;
+    } else if(!clipped) {
+        if(wasClipped && clipDetector) {
+            clipDetector(false);
+        }
+        wasClipped = false;
     }
 }
 void AudioController::processAudio(int32_t **inputs, int32_t **outputs)

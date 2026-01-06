@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include "base.h"
 
-typedef float sample_t;
-
 class AudioBuffer
 {
 public:

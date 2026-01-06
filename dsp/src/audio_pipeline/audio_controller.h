@@ -14,13 +14,24 @@ public:
         return &instance;
     }   
 
-    static uint32_t getSampleRate() {
-        Serial.println("AudioController::getSampleRate called");
-        return audioInputI2S ? audioInputI2S->getMeasuredSampleRate() : 44100;
+    void setClipDetector(void (*detector)(bool clipped)) {
+        getInstance()->clipDetector = detector;
     }
+
+    static uint32_t getSampleRate() {
+        return audioInputI2S ? audioInputI2S->getSampleRate() : 44100;
+    }
+    static uint32_t getStandardizedSampleRate() {
+        return audioInputI2S ? audioInputI2S->getStandardizedSampleRate() : 44100;
+    }
+    static bool isSampleRateStable() {
+        return audioInputI2S ? audioInputI2S->isSampleRateStable() : false;
+    }
+
 private:
     AudioController();
     int32_t outputs[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES];
+    void (*clipDetector)(bool clipped) = nullptr;
 };
 
 #endif // AUDIO_CONTROLLER_H
