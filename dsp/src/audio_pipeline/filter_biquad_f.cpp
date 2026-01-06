@@ -27,10 +27,14 @@ void AudioFilterBiquadFloat::process(AudioBuffer *block)
     release(outputBlock);
 }
 
-void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, arm_biquad_cascade_df2T_instance_f64 *iir_inst)
+void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, filter_param_t *iir_inst)
 {
-    // Use ARM CMSIS-DSP biquad filter implementations
+// Use ARM CMSIS-DSP biquad filter implementations
+#ifdef USE_DOUBLE_SAMPLES
     arm_biquad_cascade_df2T_f64(iir_inst, input, output, AUDIO_BLOCK_SAMPLES);
+#else
+    arm_biquad_cascade_df2T_f32(iir_inst, input, output, AUDIO_BLOCK_SAMPLES);
+#endif
     bool clipped = false;
     // Check for clipping and limit output to [-1.0, 1.0]
     for (uint32_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
@@ -57,7 +61,11 @@ void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
         num_stages = stage + 1;
         for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
         {
+#ifdef USE_DOUBLE_SAMPLES
             arm_biquad_cascade_df2T_init_f64(&iir_state[ch], num_stages, coeff, state[ch]);
+#else
+            arm_biquad_cascade_df2T_init_f32(&iir_state[ch], num_stages, coeff, state[ch]);
+#endif
         }
     }
     // Serial.printf("Set Biquad Stage %d out of %d Coefficients: b0=%f b1=%f b2=%f a1=%f a2=%f\n",

@@ -13,6 +13,12 @@
 // Flat filter with unity gain.
 static const sample_t identityCoefficients[STAGE_COEFFICIENTS] = {1.0, 0.0, 0.0, 0.0, 0.0};
 
+#ifdef USE_DOUBLE_SAMPLES
+typedef arm_biquad_cascade_df2T_instance_f64 filter_param_t;
+#else
+typedef arm_biquad_cascade_df2T_instance_f32 filter_param_t;
+#endif
+
 class AudioFilterBiquadFloat : public AudioComponent
 {
 public:
@@ -46,8 +52,8 @@ public:
     sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
     sample_t state[AUDIO_CHANNELS][NUM_STATES * MAX_BIQUAD_STAGES]; // extra space for safety
     uint32_t num_stages = 0;                                     // number of stages in use
-    arm_biquad_cascade_df2T_instance_f64 iir_state[AUDIO_CHANNELS];
-    void processChannel(sample_t *input, sample_t *output, arm_biquad_cascade_df2T_instance_f64 *iir_inst);
+    filter_param_t iir_state[AUDIO_CHANNELS];
+    void processChannel(sample_t *input, sample_t *output, filter_param_t *iir_inst);
 };
 
 #endif
