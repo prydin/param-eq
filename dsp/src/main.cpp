@@ -162,7 +162,7 @@ void updateDisplay()
   packet.displayMode = displayMode;
   for (int i = 0; i < FILTER_BANDS; i++)
   {
-    const float *coeffs = filter.getCoefficients(i);
+    const double *coeffs = filter.getCoefficients(i);
     packet.data.filters.coeffs[i].b0 = htonf(coeffs[0]);
     packet.data.filters.coeffs[i].b1 = htonf(coeffs[1]);
     packet.data.filters.coeffs[i].b2 = htonf(coeffs[2]);

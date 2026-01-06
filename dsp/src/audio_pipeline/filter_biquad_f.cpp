@@ -27,10 +27,10 @@ void AudioFilterBiquadFloat::process(AudioBuffer *block)
     release(outputBlock);
 }
 
-void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, arm_biquad_casd_df1_inst_f32 *iir_inst)
+void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, arm_biquad_cascade_df2T_instance_f64 *iir_inst)
 {
     // Use ARM CMSIS-DSP biquad filter implementations
-    arm_biquad_cascade_df1_f32(iir_inst, input, output, AUDIO_BLOCK_SAMPLES);
+    arm_biquad_cascade_df2T_f64(iir_inst, input, output, AUDIO_BLOCK_SAMPLES);
     bool clipped = false;
     // Check for clipping and limit output to [-1.0, 1.0]
     for (uint32_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
@@ -44,7 +44,7 @@ void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, a
     digitalWriteFast(LED_BUILTIN, clipped ? HIGH : LOW);
 }
 
-void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const float *c)
+void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
 {
     __disable_irq();
     for (int i = 0; i < STAGE_COEFFICIENTS; i++)
@@ -57,7 +57,7 @@ void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const float *c)
         num_stages = stage + 1;
         for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
         {
-            arm_biquad_cascade_df1_init_f32(&iir_state[ch], num_stages, coeff, state[ch]);
+            arm_biquad_cascade_df2T_init_f64(&iir_state[ch], num_stages, coeff, state[ch]);
         }
     }
     // Serial.printf("Set Biquad Stage %d out of %d Coefficients: b0=%f b1=%f b2=%f a1=%f a2=%f\n",
@@ -77,7 +77,7 @@ void AudioFilterBiquadFloat::setSosCoefficients(uint32_t stages, const sample_t 
     __enable_irq();
 }
 
-void AudioFilterBiquadFloat::setLowpass(uint32_t stage, float frequency, float q)
+void AudioFilterBiquadFloat::setLowpass(uint32_t stage, double frequency, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double w0 = frequency * (TWO_PI / AudioController::getSampleRate());
@@ -93,7 +93,7 @@ void AudioFilterBiquadFloat::setLowpass(uint32_t stage, float frequency, float q
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setHighpass(uint32_t stage, float frequency, float q)
+void AudioFilterBiquadFloat::setHighpass(uint32_t stage, double frequency, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double w0 = frequency * (TWO_PI / AudioController::getSampleRate());
@@ -109,7 +109,7 @@ void AudioFilterBiquadFloat::setHighpass(uint32_t stage, float frequency, float 
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setBandpass(uint32_t stage, float frequency, float q)
+void AudioFilterBiquadFloat::setBandpass(uint32_t stage, double frequency, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double w0 = frequency * (TWO_PI / AudioController::getSampleRate());
@@ -125,7 +125,7 @@ void AudioFilterBiquadFloat::setBandpass(uint32_t stage, float frequency, float 
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setNotch(uint32_t stage, float frequency, float q)
+void AudioFilterBiquadFloat::setNotch(uint32_t stage, double frequency, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double w0 = frequency * (TWO_PI / (double)AudioController::getSampleRate());
@@ -141,14 +141,14 @@ void AudioFilterBiquadFloat::setNotch(uint32_t stage, float frequency, float q)
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setLowShelf(uint32_t stage, float frequency, float gain, float slope)
+void AudioFilterBiquadFloat::setLowShelf(uint32_t stage, double frequency, double gain, double slope)
 {
-    float c[STAGE_COEFFICIENTS];
+    sample_t c[STAGE_COEFFICIENTS];
     double a = pow(10.0, gain / 40.0);
     double w0 = frequency * (TWO_PI / (double)AudioController::getSampleRate());
     double sinW0 = sin(w0);
     double cosW0 = cos(w0);
-    double ss = (a * a + 1.0) * (1.0 / (double)slope - 1.0) + 2.0 * a;
+    double ss = (a * a + 1.0) * (1.0 / slope - 1.0) + 2.0 * a;
     if (ss < 0.0)
     {
         // Avoid taking the square root of a negative number
@@ -167,10 +167,10 @@ void AudioFilterBiquadFloat::setLowShelf(uint32_t stage, float frequency, float 
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setHighShelf(uint32_t stage, float frequency, float gain, float slope)
+void AudioFilterBiquadFloat::setHighShelf(uint32_t stage, double frequency, double gain, double slope)
 {
-    float c[STAGE_COEFFICIENTS];
-    double a = pow(10.0, gain / 40.0f);
+    sample_t c[STAGE_COEFFICIENTS];
+    double a = pow(10.0, gain / 40.0);
     double w0 = frequency * (TWO_PI / (double)AudioController::getSampleRate());
     double sinW0 = sin(w0);
     double cosW0 = cos(w0);
@@ -192,11 +192,11 @@ void AudioFilterBiquadFloat::setHighShelf(uint32_t stage, float frequency, float
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setPeakingEQ(uint32_t stage, float frequency, float q, float gain)
+void AudioFilterBiquadFloat::setPeakingEQ(uint32_t stage, double frequency, double q, double gain)
 {
-    float c[STAGE_COEFFICIENTS];
-    double a = pow(10.0, gain / 40.0f);
-    double w0 = frequency * (2.0f * 3.141592654f / (double)AudioController::getSampleRate());
+    sample_t c[STAGE_COEFFICIENTS];
+    double a = pow(10.0, gain / 40.0);
+    double w0 = frequency * (2.0 * 3.141592654 / (double)AudioController::getSampleRate());
     double sinW0 = sin(w0);
     double alpha = sinW0 / (q * 2.0f);
     double cosW0 = cos(w0);

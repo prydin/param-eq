@@ -1,4 +1,4 @@
-#include <SPI.h>
+ #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <TFT_eWidget.h>
 #include <esp_mac.h>
@@ -81,7 +81,7 @@ uint16_t *colors = darkMode;
 void initGraph()
 {
   // Graph area is 280 pixels wide, 150 high, dark grey background
-  gr.createGraph(235, 150, tft.color565(5, 5, 5));
+  gr.createGraph(235, 160, tft.color565(5, 5, 5));
 
   // x scale units is from 0 to 100, y scale units is -50 to 50
   gr.setGraphScale(log10(MIN_GRAPH_FREQUENCY), log10(MAX_GRAPH_FREQUENCY), MIN_GRAPH_AMPLITUDE, MAX_GRAPH_AMPLITUDE);
@@ -106,6 +106,14 @@ void initGraph()
 
   // Draw empty graph, top left corner at 40,10 on TFT
   gr.drawGraph(40, 10);
+
+  // Drav information box to the right of the graph
+  tft.setTextDatum(TL_DATUM); // Top left text datum
+  tft.drawRect(280, 28, 40, 142, colors[COL_FOREGROUND]);
+  tft.drawString("Fs", 285, 35);
+  tft.drawString("MGain", 285, 65);
+  tft.drawString("FGain", 285, 95);
+  tft.drawString("Q", 285, 125);
 }
 
 void updateUserSettings(int filterType, int filterIndex, int displayMode)
@@ -263,16 +271,29 @@ void updateFilterParameters(Packet *packet, float masterGain)
   float frequency = ntohf(packet->data.params[index].frequency);
   tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background
   tft.setTextSize(1);
-/*  tft.setCursor(10, 180);
-  tft.printf("Gain: %.2f dB  ", gain);
-  tft.setCursor(120, 180);
-  tft.printf("Q: %.2f", Q); */
-  tft.fillRect(40, 172, 320-40, 22, colors[COL_TEXT_BACKGROUND]); // Clear area
-  tft.setTextDatum(TC_DATUM); // Top centre text datum
-  tft.setCursor(gr.getPointX(log10(frequency)), 172);
+  /*  tft.setCursor(10, 180);
+    tft.printf("Gain: %.2f dB  ", gain);
+    tft.setCursor(120, 180);
+    tft.printf("Q: %.2f", Q); */
+
+  // Draw the frequency marker on the graph
+  tft.fillRect(40, 182, 320 - 40, 22, colors[COL_TEXT_BACKGROUND]); // Clear area
+  tft.setTextDatum(TC_DATUM);                                       // Top centre text datum
+  tft.setCursor(gr.getPointX(log10(frequency)), 182);
   tft.printf("^");
-  tft.setCursor(gr.getPointX(log10(frequency)) - 5, 180);
+  tft.setCursor(gr.getPointX(log10(frequency)) - 5, 190);
   tft.printf("%.0f", frequency);
+
+  tft.setTextDatum(TL_DATUM);
+  tft.setCursor(285, 48);
+  tft.printf("%5.1f", 44.1);
+  tft.setCursor(285, 78);
+  tft.printf("%5.1f", masterGain);
+  tft.setCursor(285, 108);
+  tft.printf("%5.1f", gain);
+  tft.setCursor(285, 138);
+  tft.printf("%5.1f", Q);
+
   updateUserSettings(filterType, int(index), packet->displayMode);
 }
 
