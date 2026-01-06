@@ -15,7 +15,7 @@
  * @note I2C display address is hardcoded to 0xb1ce.
  * @note Audio processing uses floating-point biquad filters for precise frequency response control.
  */
-#include <Audio.h>
+#include <Teensy4i2s.h>
 #include <Wire.h>
 #include <Wire.h>
 #include <SD.h>
@@ -25,7 +25,9 @@
 #include <stdlib.h>
 #include "../../common/filter.h"
 #include "../../common/packets.h"
-#include "filter_biquad_f.h"
+#include "audio_pipeline/filter_biquad_f.h"
+#include "audio_pipeline/audio_square_wave.h"
+#include "audio_pipeline/audio_gain.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
@@ -65,24 +67,12 @@ OneButton filterSelectButton(FILTER_INDEX_PIN, true);
 OneButton filterTypeSelectButton(FILTER_TYPE_PIN, true);
 OneButton displayModeButton(FILTER_MODE_PIN, true);
 
-AudioSynthWaveform waveform;
+AudioSquareWave waveform;
 
 // The filters
-AudioFilterBiquadFloat filterLeft;
-AudioFilterBiquadFloat filterRight;
+AudioFilterBiquadFloat filter;
 
-AudioConnection patchCordL1(waveform, 0, filterLeft, 0);
-AudioConnection patchCordR1(waveform, 0, filterRight, 0);
-
-AudioMixer4 mixer2;
-AudioMixer4 mixer1;
-AudioOutputI2S i2s;
-
-// Conect filter chains to mixers and I2S output
-AudioConnection patchCord1(filterLeft, 0, mixer1, 0);
-AudioConnection patchCord2(filterRight, 0, mixer2, 0);
-AudioConnection patchCord3(mixer2, 0, i2s, 1);
-AudioConnection patchCord4(mixer1, 0, i2s, 0);
+AudioGain gain;
 
 // User settings
 FilterSettings filterSettings[FILTER_BANDS];
@@ -141,12 +131,12 @@ void updateDisplay()
   packet.displayMode = displayMode;
   for (int i = 0; i < FILTER_BANDS; i++)
   {
-    const float *coeffs = filterLeft.getCoefficients(i);
+    const float *coeffs = filter.getCoefficients(i);
     packet.data.coeffs[i].b0 = htonf(coeffs[0]);
     packet.data.coeffs[i].b1 = htonf(coeffs[1]);
     packet.data.coeffs[i].b2 = htonf(coeffs[2]);
-    packet.data.coeffs[i].a1 = htonf(coeffs[3]);
-    packet.data.coeffs[i].a2 = htonf(coeffs[4]);
+    packet.data.coeffs[i].a1 = htonf(-coeffs[3]);
+    packet.data.coeffs[i].a2 = htonf(-coeffs[4]);
   }
   sendToDisplay(&packet);
 
@@ -159,42 +149,58 @@ void updateDisplay()
   for (int i = 0; i < FILTER_BANDS; i++)
   {
     packet.selectedFilterBand = selectedFilterBand;
-    packet.data.params[i].filterType = settings->type;
-    packet.data.params[i].frequency = htonf(settings->frequency);
-    packet.data.params[i].Q = htonf(settings->Q);
-    packet.data.params[i].gain = htonf(settings->gain);
+    packet.data.params[i].filterType = filterSettings[i].type;
+    packet.data.params[i].frequency = htonf(filterSettings[i].frequency);
+    packet.data.params[i].Q = htonf(filterSettings[i].Q);
+    packet.data.params[i].gain = htonf(filterSettings[i].gain);
   }
   sendToDisplay(&packet);
 }
 
-void updateSelectedFilter(int selected)
+/**
+ * @brief Updates the filter coefficients for the selected filter band.
+ * 
+ * This function configures both left and right channel filters based on the
+ * filter type and parameters stored in the filterSettings array for the
+ * specified band.
+ * 
+ * @param selected The index of the filter band to update
+ * 
+ * @note The function applies the same filter settings to both left and right
+ *       channels to maintain stereo coherence.
+ * @note Supported filter types: LOWSHELF, HIGHSHELF, PEAKINGEQ, and BYPASS
+ */
+void updateFilter(int selected)
 {
   FilterSettings *settings = &filterSettings[selected];
   switch (settings->type)
   {
   case LOWSHELF:
-    filterLeft.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    filterRight.setLowShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    filter.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
     break;
   case HIGHSHELF:
-    filterLeft.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
-    filterRight.setHighShelf(selectedFilterBand, settings->frequency, settings->gain, settings->Q);
+    filter.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
     break;
   case PEAKINGEQ:
-    filterLeft.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
-    filterRight.setPeakingEQ(selectedFilterBand, settings->frequency, settings->Q, settings->gain);
+    filter.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
     break;
   case BYPASS:
-    filterLeft.bypass(selectedFilterBand);
-    filterRight.bypass(selectedFilterBand);
+    filter.bypass(selected);
   }
 }
 
+/**
+ * @brief Updates all filter bands by applying the current settings.
+ * 
+ * This function iterates through all filter bands defined by FILTER_BANDS
+ * and calls updateFilter() for each band to ensure that the filter
+ * coefficients are up to date based on the current settings.
+ */
 void updateAllFilters()
 {
   for (int i = 0; i < FILTER_BANDS; i++)
   {
-    updateSelectedFilter(i);
+    updateFilter(i);
   }
 }
 
@@ -202,7 +208,7 @@ void updateAllFilters()
  * @brief Initializes the audio processing system, UI controls, and hardware interfaces.
  *
  * This function sets up the following components:
- * - Serial communication at 115000 baud
+  * - Serial communication at 115000 baud
  * - Audio memory allocation (12 blocks)
  * - Waveform generator configured as square wave at 980 Hz with 0.3 amplitude
  * - Rotary encoder pins for frequency control (FC), gain, Q factor, and filter index
@@ -218,11 +224,23 @@ void updateAllFilters()
 void setup(void)
 {
   Serial.begin(115000);
-  AudioMemory(12);
-  waveform.begin(WAVEFORM_SQUARE);
-  waveform.amplitude(0.3f);
-  waveform.frequency(980.0f);
 
+  // Build audio pipeline
+  // Source -> Gain -> Filter -> I2S
+  gain.addReceiver(&filter);
+  filter.addReceiver(AudioController::getInstance());
+
+  AudioController::getInstance()->addReceiver(&waveform);
+  gain.setGain(0.5f); // Reduce volume to avoid clipping
+  
+  InitI2s(true);
+  waveform.setAmplitude(0.5f);
+  waveform.setFrequency(980.0f); // 980 Hz test tone
+  waveform.addReceiver(&gain);
+  
+  // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
+  delay(100);
+  
   // Initialize UI
   // Set all the rotary encoder pints to input mode
   pinMode(FC_PIN_A, INPUT);
@@ -257,9 +275,6 @@ void setup(void)
   pinMode(10, OUTPUT);
   digitalWrite(10, HIGH); // Chip select high
 
-  mixer1.gain(0, 0.5); // Left channel
-  mixer2.gain(0, 0.5); // Right channel
-
   // Reset last save time
   lastSaveTime = millis();
 
@@ -271,6 +286,8 @@ void setup(void)
     {
       filterSettings[i] = persistedSettings.filterSettings[i];
     }
+    selectedFilterBand = persistedSettings.selectedFilterBand;
+    displayMode = persistedSettings.displayMode;
     Serial.println("Loaded persisted settings from EEPROM.");
   }
   else
@@ -320,6 +337,16 @@ void setup(void)
  */
 void loop(void)
 {
+  static time_t nextStatusPrint = 0;
+  time_t currentTime = millis(); 
+
+  // Print CPU load every 2 seconds
+  if (currentTime >= nextStatusPrint)
+  {
+    Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz\n", Timers::GetCpuLoad() * 100.0f, AudioController::getSampleRate());
+    nextStatusPrint = currentTime + 2000; // Print every 2 seconds
+  }
+
   // Tick rotary encoders
   FilterSettings *settings = &filterSettings[selectedFilterBand];
   int oldFilterType = settings->type;
@@ -364,6 +391,8 @@ void loop(void)
       {
         persistedSettings.filterSettings[i] = filterSettings[i];
       }
+      persistedSettings.selectedFilterBand = selectedFilterBand;
+      persistedSettings.displayMode = displayMode;
       saveSettings(persistedSettings);
       lastSaveTime = currentTime;
       Serial.println("Settings saved to EEPROM.");
@@ -377,7 +406,7 @@ void loop(void)
   settings->Q = newQ;
 
   // Set up filter according to type
-  updateSelectedFilter(selectedFilterBand);
+  updateFilter(selectedFilterBand);
   updateDisplay();
   saveNeeded = true;
 }
