@@ -1,4 +1,4 @@
-27220786186480542
+27229629589207313
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -60172,12 +60172,47 @@ ceramic
 3
 3
 Custom
+OSC_SIT8209AI-G1-25E-156.253906Y
+
+
+0
+4
+4
+Custom
+RCA-Phono_CUI-Devices_RCJ-02X_Vertical_InvertedPinNumbers
+RCA Phono Connector, vertical, PCB mount, RCJ-02X, (https://www.cuidevices.com/product/interconnect/connectors/rca-connectors/rcj-02-series)
+RCJ-021 RCJ-022 RCJ-023 RCJ-024 RCJ-025 RCJ-026 RCJ-027 RCA phono jack connector CUI
+0
+3
+2
+Custom
 SON45P300X300X80-13N-D
 12-Lead Plastic DFN (3mm x 3mm)*
 Integrated Circuit
 0
 13
 13
+Custom
+SWITCHCRAFT_PJRAN2X1U01AUX
+
+
+0
+6
+6
+Custom
+logo
+
+
+0
+0
+0
+Custom
+logo2
+
+
+0
+0
+0
 Diode_SMD
 D_0201_0603Metric
 Diode SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator

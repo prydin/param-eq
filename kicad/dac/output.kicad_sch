@@ -2,7 +2,7 @@
 	(version 20250114)
 	(generator "eeschema")
 	(generator_version "9.0")
-	(uuid "091e8918-8ab1-400f-8987-4c4aea8fa14e")
+	(uuid "927faba6-527f-4463-979c-7964af6728e9")
 	(paper "A4")
 	(lib_symbols
 		(symbol "Amplifier_Operational:OPA1612AxD"
@@ -252,6 +252,594 @@
 						(effects
 							(font
 								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Custom:PJRAN2X1U01AUX"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at -5.08 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Value" "PJRAN2X1U01AUX"
+				(at -5.08 -5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Footprint" "PJRAN2X1U01AUX:SWITCHCRAFT_PJRAN2X1U01AUX"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "3.20mm ID, 9.00mm OD _RCA_ Phono _RCA_ Jack Mono Connector Solder"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "MF" "Switchcraft Inc."
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "PACKAGE" "None"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "PRICE" "None"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Package" "None"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Check_prices" "https://www.snapeda.com/parts/PJRAN2X1U01AUX/SWITCHCRAFT/view-part/?ref=eda"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Price" "None"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "SnapEDA_Link" "https://www.snapeda.com/parts/PJRAN2X1U01AUX/SWITCHCRAFT/view-part/?ref=snap"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "MP" "PJRAN2X1U01AUX"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Availability" "In Stock"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "AVAILABILITY" "Unavailable"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Description_1" "2 POS RA PH JK R-W G | Switchcraft PJRAN2X1U01AUX"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(symbol "PJRAN2X1U01AUX_1_0"
+				(rectangle
+					(start -7.1574 -3.8292)
+					(end 3.6376 1.3778)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(polyline
+					(pts
+						(xy -4.445 2.667) (xy -4.445 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -4.445 -1.27) (xy -5.715 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -4.445 -1.27) (xy -4.445 -2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.159 1.905) (xy -2.794 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.524 2.54) (xy -2.159 1.905)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.508 1.016) (xy 0.508 1.016)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy -1.524 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy -0.508 1.016)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0 0)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0) (xy 5.08 0)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.508 1.016) (xy 0 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 5.08 2.54) (xy 0 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "2_A"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 0 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "3_A"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -2.54 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "1_A"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+			)
+			(symbol "PJRAN2X1U01AUX_2_0"
+				(rectangle
+					(start -7.1574 -3.8292)
+					(end 3.6376 1.3778)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(polyline
+					(pts
+						(xy -4.445 2.667) (xy -4.445 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -4.445 -1.27) (xy -5.715 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -4.445 -1.27) (xy -4.445 -2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.159 1.905) (xy -2.794 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.524 2.54) (xy -2.159 1.905)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.508 1.016) (xy 0.508 1.016)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy -1.524 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy -0.508 1.016)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0 0)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0) (xy 5.08 0)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.508 1.016) (xy 0 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 5.08 2.54) (xy 0 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "2_B"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 0 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "3_B"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -2.54 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "1_B"
+						(effects
+							(font
+								(size 1.016 1.016)
 							)
 						)
 					)
@@ -964,22 +1552,16 @@
 		(uuid "081b32ff-150e-4b30-a341-f48bc77ebb70")
 	)
 	(junction
+		(at 250.19 123.19)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "08af4536-9655-442a-b0bb-3b107e7c57d3")
+	)
+	(junction
 		(at 60.96 104.14)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "095d8215-81c1-4bae-bf17-c5f8b2af9f30")
-	)
-	(junction
-		(at 60.96 121.92)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "0abde17b-6eb1-4b08-9b31-bf659eb7ab44")
-	)
-	(junction
-		(at 60.96 134.62)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "0c1e69bc-1a21-4758-8a6b-9dd1107084f9")
 	)
 	(junction
 		(at 189.23 35.56)
@@ -1024,10 +1606,22 @@
 		(uuid "33901b7d-9a88-41ca-b93b-a84a506bb734")
 	)
 	(junction
+		(at 165.1 118.11)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "350085fe-02c6-492f-99da-728da189d790")
+	)
+	(junction
 		(at 154.94 49.53)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "3da5d384-c600-4d93-9883-0cfe49089792")
+	)
+	(junction
+		(at 36.83 118.11)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "407c2691-d24b-4d24-9f57-33a22061d10e")
 	)
 	(junction
 		(at 96.52 49.53)
@@ -1040,6 +1634,18 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "44ade4ea-21ff-4ffa-ae24-ac6a7d6ccd9f")
+	)
+	(junction
+		(at 189.23 118.11)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "45063f74-64fe-476a-8001-0b78766bd7e3")
+	)
+	(junction
+		(at 120.65 95.25)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "462059c8-388a-4e18-b991-58f89ce452db")
 	)
 	(junction
 		(at 60.96 49.53)
@@ -1060,6 +1666,12 @@
 		(uuid "53331812-3d78-4d49-8145-51dee8d492cf")
 	)
 	(junction
+		(at 60.96 118.11)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "547b628d-6fc7-48bf-8648-fe3383394953")
+	)
+	(junction
 		(at 48.26 186.69)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1070,6 +1682,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "5ab21f6b-6523-4b0d-9e28-b99d972752f8")
+	)
+	(junction
+		(at 246.38 95.25)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "64687381-f2de-48b7-895b-c547bc6ea9c4")
 	)
 	(junction
 		(at 76.2 83.82)
@@ -1084,10 +1702,16 @@
 		(uuid "69481ecf-a57e-4968-883b-72400cbeaeed")
 	)
 	(junction
-		(at 36.83 121.92)
+		(at 120.65 104.14)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "6f6a1938-a3c1-4900-b353-0298ec5a43ed")
+		(uuid "6b426925-d056-4604-9219-0f73236eaff4")
+	)
+	(junction
+		(at 165.1 128.27)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "71c0928a-4aab-488c-9124-cddb1968d200")
 	)
 	(junction
 		(at 137.16 166.37)
@@ -1144,16 +1768,10 @@
 		(uuid "a817b915-2036-4d86-bdbc-e1e866af3f9c")
 	)
 	(junction
-		(at 165.1 121.92)
+		(at 189.23 128.27)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "a8f503f1-de12-44a4-b312-00aad93a250a")
-	)
-	(junction
-		(at 165.1 134.62)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ba72acd1-c184-416c-94ea-933f46fcf86b")
+		(uuid "ac7a9a4d-6e10-47d4-95a9-405fdd04adcd")
 	)
 	(junction
 		(at 26.67 106.68)
@@ -1162,10 +1780,10 @@
 		(uuid "bd176ded-3797-476f-93c8-032e0e753b6e")
 	)
 	(junction
-		(at 36.83 134.62)
+		(at 124.46 120.65)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "c2233642-351a-4910-a171-52afab3ef2be")
+		(uuid "be9b134e-84e0-457d-bb34-f49d47466f8e")
 	)
 	(junction
 		(at 60.96 35.56)
@@ -1180,10 +1798,16 @@
 		(uuid "cb8b6499-f105-445f-9649-2b78e65acc36")
 	)
 	(junction
-		(at 189.23 134.62)
+		(at 60.96 128.27)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "d1561226-f1a5-47a2-af28-42909471b77b")
+		(uuid "cd67556c-681f-432b-9551-596099a845bb")
+	)
+	(junction
+		(at 36.83 128.27)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d146d79d-afb3-44d9-8738-4474c9922c45")
 	)
 	(junction
 		(at 204.47 49.53)
@@ -1192,16 +1816,16 @@
 		(uuid "dc096ed9-be91-4e08-a659-8942f9a96f49")
 	)
 	(junction
+		(at 246.38 104.14)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "dc6d5583-0eed-4610-9605-805917571f2d")
+	)
+	(junction
 		(at 90.17 186.69)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "eb3204ae-2b22-41f5-8247-e9df8bad2d86")
-	)
-	(junction
-		(at 189.23 121.92)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ed074116-a035-47c8-b1b3-512f6fd57202")
 	)
 	(junction
 		(at 154.94 106.68)
@@ -1244,6 +1868,16 @@
 			(type default)
 		)
 		(uuid "05ac158a-3ff5-459a-909c-14e810e223d7")
+	)
+	(wire
+		(pts
+			(xy 36.83 128.27) (xy 36.83 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "083e0d0e-f430-46e2-882c-0e3ca8d43bee")
 	)
 	(wire
 		(pts
@@ -1307,7 +1941,27 @@
 	)
 	(wire
 		(pts
-			(xy 45.72 134.62) (xy 36.83 134.62)
+			(xy 189.23 128.27) (xy 189.23 137.16)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "14e6072b-0128-494a-9111-fa55e93a088e")
+	)
+	(wire
+		(pts
+			(xy 246.38 92.71) (xy 246.38 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1854a009-50ac-49da-a5e6-dd651dc21847")
+	)
+	(wire
+		(pts
+			(xy 45.72 128.27) (xy 36.83 128.27)
 		)
 		(stroke
 			(width 0)
@@ -1427,13 +2081,13 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 121.92) (xy 36.83 134.62)
+			(xy 120.65 104.14) (xy 120.65 95.25)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "22385b4b-d7c3-4049-9dc4-b0b00977a963")
+		(uuid "221d38dc-efee-4ec8-ad68-c57a0e3ac1ff")
 	)
 	(wire
 		(pts
@@ -1457,16 +2111,6 @@
 	)
 	(wire
 		(pts
-			(xy 60.96 134.62) (xy 60.96 121.92)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2ae32465-5f0b-4d20-b73e-c38c4efec37e")
-	)
-	(wire
-		(pts
 			(xy 76.2 71.12) (xy 76.2 83.82)
 		)
 		(stroke
@@ -1474,6 +2118,16 @@
 			(type default)
 		)
 		(uuid "2aea79bc-4efb-474d-8e0e-fe31e002f2d9")
+	)
+	(wire
+		(pts
+			(xy 246.38 123.19) (xy 250.19 123.19)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2b031005-b1b9-4a9c-91fd-92ac2b709c3b")
 	)
 	(wire
 		(pts
@@ -1497,7 +2151,17 @@
 	)
 	(wire
 		(pts
-			(xy 129.54 121.92) (xy 129.54 115.57)
+			(xy 130.81 97.79) (xy 130.81 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "33cdc408-ca98-4e4f-89ab-7bd6013569a6")
+	)
+	(wire
+		(pts
+			(xy 124.46 121.92) (xy 124.46 120.65)
 		)
 		(stroke
 			(width 0)
@@ -1557,7 +2221,7 @@
 	)
 	(wire
 		(pts
-			(xy 257.81 107.95) (xy 257.81 104.14)
+			(xy 246.38 107.95) (xy 246.38 104.14)
 		)
 		(stroke
 			(width 0)
@@ -1567,7 +2231,7 @@
 	)
 	(wire
 		(pts
-			(xy 60.96 134.62) (xy 53.34 134.62)
+			(xy 60.96 128.27) (xy 53.34 128.27)
 		)
 		(stroke
 			(width 0)
@@ -1587,16 +2251,6 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 134.62) (xy 165.1 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4b2e6cbd-e10e-46cd-9e2d-fab7e4c492a9")
-	)
-	(wire
-		(pts
 			(xy 96.52 71.12) (xy 96.52 83.82)
 		)
 		(stroke
@@ -1604,6 +2258,16 @@
 			(type default)
 		)
 		(uuid "4cc2e518-00d9-463e-8bae-c1ca7c6cb097")
+	)
+	(wire
+		(pts
+			(xy 120.65 120.65) (xy 124.46 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4efd08cb-2d83-4737-a45e-490f08742b62")
 	)
 	(wire
 		(pts
@@ -1687,6 +2351,16 @@
 	)
 	(wire
 		(pts
+			(xy 189.23 118.11) (xy 189.23 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5d43e524-38c0-4608-b491-7f764f5da7aa")
+	)
+	(wire
+		(pts
 			(xy 96.52 49.53) (xy 96.52 63.5)
 		)
 		(stroke
@@ -1707,6 +2381,16 @@
 	)
 	(wire
 		(pts
+			(xy 120.65 92.71) (xy 120.65 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "60e0ac5a-c647-4bab-9ff6-6e8f1abe6a65")
+	)
+	(wire
+		(pts
 			(xy 48.26 166.37) (xy 48.26 167.64)
 		)
 		(stroke
@@ -1714,6 +2398,16 @@
 			(type default)
 		)
 		(uuid "6159de1e-12f5-4645-9137-cba84ddb6ffd")
+	)
+	(wire
+		(pts
+			(xy 130.81 120.65) (xy 124.46 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "62af1c75-f7ee-411e-98d3-2c56cb2aa49c")
 	)
 	(wire
 		(pts
@@ -1767,33 +2461,13 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 121.92) (xy 189.23 104.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6daca2ea-d8c0-4cf1-bf7b-933fb807d833")
-	)
-	(wire
-		(pts
-			(xy 53.34 146.05) (xy 60.96 146.05)
+			(xy 53.34 138.43) (xy 60.96 138.43)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "6f6fc571-81f5-4983-a487-b2a4a6d2695b")
-	)
-	(wire
-		(pts
-			(xy 257.81 121.92) (xy 257.81 115.57)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6fa3674a-e457-41f1-abd5-b848282a2168")
 	)
 	(wire
 		(pts
@@ -1807,7 +2481,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 134.62) (xy 189.23 121.92)
+			(xy 189.23 118.11) (xy 189.23 128.27)
 		)
 		(stroke
 			(width 0)
@@ -1827,13 +2501,13 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 121.92) (xy 165.1 134.62)
+			(xy 255.27 97.79) (xy 255.27 123.19)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "74cc092e-cc35-468c-95ba-57411b54c113")
+		(uuid "7586b279-e411-4e80-802d-985de9e4a07e")
 	)
 	(wire
 		(pts
@@ -1937,7 +2611,7 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 121.92) (xy 173.99 121.92)
+			(xy 165.1 118.11) (xy 173.99 118.11)
 		)
 		(stroke
 			(width 0)
@@ -1964,6 +2638,16 @@
 			(type default)
 		)
 		(uuid "8ebd70d1-784a-4b03-a639-5c2de3f7d04c")
+	)
+	(wire
+		(pts
+			(xy 165.1 118.11) (xy 165.1 128.27)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8ebe710a-d27f-4f91-b06b-25038a550a74")
 	)
 	(wire
 		(pts
@@ -1997,13 +2681,13 @@
 	)
 	(wire
 		(pts
-			(xy 257.81 59.69) (xy 257.81 63.5)
+			(xy 120.65 95.25) (xy 130.81 95.25)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "91691fc3-2c17-4861-8734-29e6569fd199")
+		(uuid "9192a8b6-55e1-4771-9bbf-d8eb2bdfd1e2")
 	)
 	(wire
 		(pts
@@ -2107,13 +2791,23 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 146.05) (xy 45.72 146.05)
+			(xy 36.83 138.43) (xy 45.72 138.43)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "a31764fc-44b7-4625-b2fd-902dbb745488")
+	)
+	(wire
+		(pts
+			(xy 257.81 92.71) (xy 246.38 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a36c8d35-f864-4cc4-ba27-4739e75584c8")
 	)
 	(wire
 		(pts
@@ -2127,7 +2821,7 @@
 	)
 	(wire
 		(pts
-			(xy 173.99 134.62) (xy 165.1 134.62)
+			(xy 173.99 128.27) (xy 165.1 128.27)
 		)
 		(stroke
 			(width 0)
@@ -2207,6 +2901,16 @@
 	)
 	(wire
 		(pts
+			(xy 120.65 120.65) (xy 120.65 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "aeea6dd4-8da0-4b85-806a-09e804dfed33")
+	)
+	(wire
+		(pts
 			(xy 224.79 71.12) (xy 224.79 83.82)
 		)
 		(stroke
@@ -2217,16 +2921,6 @@
 	)
 	(wire
 		(pts
-			(xy 60.96 146.05) (xy 60.96 134.62)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b14dc8ad-dbdb-414d-9c50-3fb9914559be")
-	)
-	(wire
-		(pts
 			(xy 31.75 60.96) (xy 31.75 69.85)
 		)
 		(stroke
@@ -2234,6 +2928,26 @@
 			(type default)
 		)
 		(uuid "b2a21bd2-2169-446d-98c0-86ab8669f36a")
+	)
+	(wire
+		(pts
+			(xy 246.38 95.25) (xy 257.81 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b48f8562-23d7-4a4d-9c2c-f9a8416480dd")
+	)
+	(wire
+		(pts
+			(xy 246.38 95.25) (xy 246.38 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b64720ae-35b4-47d7-a00d-e34c076a9af7")
 	)
 	(wire
 		(pts
@@ -2257,7 +2971,7 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 106.68) (xy 165.1 121.92)
+			(xy 165.1 106.68) (xy 165.1 118.11)
 		)
 		(stroke
 			(width 0)
@@ -2277,7 +2991,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 134.62) (xy 181.61 134.62)
+			(xy 189.23 128.27) (xy 181.61 128.27)
 		)
 		(stroke
 			(width 0)
@@ -2287,13 +3001,43 @@
 	)
 	(wire
 		(pts
-			(xy 53.34 121.92) (xy 60.96 121.92)
+			(xy 53.34 118.11) (xy 60.96 118.11)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "bd909072-d138-46dd-9731-745dfa94321d")
+	)
+	(wire
+		(pts
+			(xy 250.19 123.19) (xy 250.19 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "be3220f2-4b69-42fd-a86b-6ecdd807bdeb")
+	)
+	(wire
+		(pts
+			(xy 246.38 115.57) (xy 246.38 123.19)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "be9bb6dc-bfa7-4af7-9c29-532a7ea6f31f")
+	)
+	(wire
+		(pts
+			(xy 255.27 123.19) (xy 250.19 123.19)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c084aecf-5d70-446e-b91e-423e8413ab7f")
 	)
 	(wire
 		(pts
@@ -2317,7 +3061,7 @@
 	)
 	(wire
 		(pts
-			(xy 129.54 107.95) (xy 129.54 104.14)
+			(xy 120.65 107.95) (xy 120.65 104.14)
 		)
 		(stroke
 			(width 0)
@@ -2347,7 +3091,17 @@
 	)
 	(wire
 		(pts
-			(xy 181.61 121.92) (xy 189.23 121.92)
+			(xy 36.83 118.11) (xy 36.83 128.27)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c7b9bc2d-21f2-4b1b-9445-70b9350e3337")
+	)
+	(wire
+		(pts
+			(xy 181.61 118.11) (xy 189.23 118.11)
 		)
 		(stroke
 			(width 0)
@@ -2377,7 +3131,7 @@
 	)
 	(wire
 		(pts
-			(xy 181.61 146.05) (xy 189.23 146.05)
+			(xy 181.61 137.16) (xy 189.23 137.16)
 		)
 		(stroke
 			(width 0)
@@ -2387,7 +3141,7 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 146.05) (xy 173.99 146.05)
+			(xy 165.1 137.16) (xy 173.99 137.16)
 		)
 		(stroke
 			(width 0)
@@ -2447,16 +3201,6 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 134.62) (xy 36.83 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d45ca8a4-8b33-4fe1-a14d-741bcf523838")
-	)
-	(wire
-		(pts
 			(xy 165.1 21.59) (xy 172.72 21.59)
 		)
 		(stroke
@@ -2474,6 +3218,16 @@
 			(type default)
 		)
 		(uuid "d6a5b975-a6c7-4f8e-acee-a012d988e672")
+	)
+	(wire
+		(pts
+			(xy 60.96 128.27) (xy 60.96 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d6d5ab75-eb9c-4da4-9531-4cf0186ef054")
 	)
 	(wire
 		(pts
@@ -2497,16 +3251,6 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 146.05) (xy 189.23 134.62)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dc0d6d0c-f47b-437e-b230-9bec30aa4062")
-	)
-	(wire
-		(pts
 			(xy 26.67 83.82) (xy 26.67 106.68)
 		)
 		(stroke
@@ -2514,6 +3258,16 @@
 			(type default)
 		)
 		(uuid "dd0d3851-272c-4827-8c65-c6f1af51ac67")
+	)
+	(wire
+		(pts
+			(xy 257.81 59.69) (xy 257.81 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dee9e8a3-0951-4f01-a1f4-5cac91b6ca53")
 	)
 	(wire
 		(pts
@@ -2527,7 +3281,7 @@
 	)
 	(wire
 		(pts
-			(xy 242.57 104.14) (xy 257.81 104.14)
+			(xy 242.57 104.14) (xy 246.38 104.14)
 		)
 		(stroke
 			(width 0)
@@ -2547,7 +3301,17 @@
 	)
 	(wire
 		(pts
-			(xy 60.96 121.92) (xy 60.96 104.14)
+			(xy 255.27 97.79) (xy 257.81 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e501bb03-f945-466e-b530-88790284cdbb")
+	)
+	(wire
+		(pts
+			(xy 60.96 118.11) (xy 60.96 128.27)
 		)
 		(stroke
 			(width 0)
@@ -2587,6 +3351,16 @@
 	)
 	(wire
 		(pts
+			(xy 60.96 118.11) (xy 60.96 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ea1b7cfd-c467-4d96-afd0-171463f176cb")
+	)
+	(wire
+		(pts
 			(xy 189.23 104.14) (xy 204.47 104.14)
 		)
 		(stroke
@@ -2594,6 +3368,26 @@
 			(type default)
 		)
 		(uuid "f32102d2-07f3-4812-93ff-f049d4698170")
+	)
+	(wire
+		(pts
+			(xy 130.81 92.71) (xy 120.65 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f41e6ba1-2d6b-439e-90cf-6deb7cf64c3a")
+	)
+	(wire
+		(pts
+			(xy 165.1 128.27) (xy 165.1 137.16)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f4cd0fe8-df0e-408a-a55c-a21b353659d9")
 	)
 	(wire
 		(pts
@@ -2607,7 +3401,7 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 121.92) (xy 45.72 121.92)
+			(xy 36.83 118.11) (xy 45.72 118.11)
 		)
 		(stroke
 			(width 0)
@@ -2627,7 +3421,7 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 106.68) (xy 36.83 121.92)
+			(xy 36.83 106.68) (xy 36.83 118.11)
 		)
 		(stroke
 			(width 0)
@@ -2637,7 +3431,7 @@
 	)
 	(wire
 		(pts
-			(xy 114.3 104.14) (xy 129.54 104.14)
+			(xy 114.3 104.14) (xy 120.65 104.14)
 		)
 		(stroke
 			(width 0)
@@ -2748,7 +3542,7 @@
 		(at 224.79 93.98 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -2789,7 +3583,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "ERA-1AEB472C"
+			(at 224.79 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 224.79 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Panasonic"
 			(at 224.79 93.98 0)
 			(effects
 				(font
@@ -2857,8 +3669,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "MCT06030C1400FP500"
 			(at 238.76 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 238.76 104.14 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Vishay"
+			(at 238.76 104.14 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2883,7 +3713,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 177.8 121.92 90)
+		(at 177.8 118.11 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2892,7 +3722,7 @@
 		(fields_autoplaced yes)
 		(uuid "0ed7f3c7-96c4-4a46-b982-4e6aadcffcff")
 		(property "Reference" "C22"
-			(at 177.8 114.3 90)
+			(at 177.8 110.49 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2900,7 +3730,7 @@
 			)
 		)
 		(property "Value" "510p"
-			(at 177.8 116.84 90)
+			(at 177.8 113.03 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2908,7 +3738,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 181.61 120.9548 0)
+			(at 181.61 117.1448 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2917,7 +3747,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 177.8 121.92 0)
+			(at 177.8 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2925,8 +3755,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
-			(at 177.8 121.92 0)
+		(property "Description" "GRM1885C1H511JA01D"
+			(at 177.8 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 177.8 118.11 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Murata"
+			(at 177.8 118.11 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2993,8 +3841,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "GRM1885C1H511JA01D"
 			(at 48.26 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 48.26 49.53 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Murata"
+			(at 48.26 49.53 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3022,7 +3888,7 @@
 		(at 224.79 67.31 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -3063,7 +3929,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "ERA-1AEB472C"
+			(at 224.79 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 224.79 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Panasonic"
 			(at 224.79 67.31 0)
 			(effects
 				(font
@@ -3092,7 +3976,7 @@
 		(at 96.52 67.31 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -3133,7 +4017,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "ERA-1AEB472C"
+			(at 96.52 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 96.52 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Panasonic"
 			(at 96.52 67.31 0)
 			(effects
 				(font
@@ -3162,7 +4064,7 @@
 		(at 76.2 95.25 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp yes)
 		(fields_autoplaced yes)
@@ -3204,6 +4106,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 76.2 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
 			(at 76.2 95.25 0)
 			(effects
 				(font
@@ -3273,7 +4184,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "06035A104JAT2A"
+			(at 48.26 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 48.26 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Kyocera"
 			(at 48.26 171.45 0)
 			(effects
 				(font
@@ -3343,7 +4272,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Dual SoundPlus High Performance, Bipolar-Input Audio Operational Amplifiers, SOIC-8"
+		(property "Description" "OPA1612AIDR"
+			(at 34.29 176.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 34.29 176.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "TI"
 			(at 34.29 176.53 0)
 			(effects
 				(font
@@ -3453,7 +4400,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 49.53 121.92 90)
+		(at 49.53 118.11 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -3462,7 +4409,7 @@
 		(fields_autoplaced yes)
 		(uuid "33c8b83d-d3f6-4db2-9547-bf9c066baaf6")
 		(property "Reference" "C10"
-			(at 49.53 114.3 90)
+			(at 49.53 110.49 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3470,7 +4417,7 @@
 			)
 		)
 		(property "Value" "510p"
-			(at 49.53 116.84 90)
+			(at 49.53 113.03 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3478,7 +4425,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 53.34 120.9548 0)
+			(at 53.34 117.1448 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3487,7 +4434,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 49.53 121.92 0)
+			(at 49.53 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3495,8 +4442,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
-			(at 49.53 121.92 0)
+		(property "Description" "GRM1885C1H511JA01D"
+			(at 49.53 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 49.53 118.11 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Murata"
+			(at 49.53 118.11 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3587,7 +4552,7 @@
 	)
 	(symbol
 		(lib_id "power:GNDA")
-		(at 129.54 121.92 0)
+		(at 124.46 121.92 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -3596,7 +4561,7 @@
 		(fields_autoplaced yes)
 		(uuid "38c7e03d-04af-40ff-ba71-ca1ff091af65")
 		(property "Reference" "#PWR015"
-			(at 129.54 128.27 0)
+			(at 124.46 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3605,7 +4570,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 129.54 127 0)
+			(at 124.46 127 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3613,7 +4578,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 129.54 121.92 0)
+			(at 124.46 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3622,7 +4587,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 129.54 121.92 0)
+			(at 124.46 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3631,7 +4596,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
-			(at 129.54 121.92 0)
+			(at 124.46 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3653,7 +4618,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 177.8 146.05 90)
+		(at 177.8 137.16 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -3662,7 +4627,7 @@
 		(fields_autoplaced yes)
 		(uuid "50127102-f20c-4025-a6d8-fd1ced15234e")
 		(property "Reference" "R26"
-			(at 177.8 139.7 90)
+			(at 177.8 130.81 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3670,7 +4635,7 @@
 			)
 		)
 		(property "Value" "3.6k"
-			(at 177.8 142.24 90)
+			(at 177.8 133.35 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3678,7 +4643,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder"
-			(at 177.8 147.828 90)
+			(at 177.8 138.938 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3687,7 +4652,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 177.8 146.05 0)
+			(at 177.8 137.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3695,8 +4660,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 177.8 146.05 0)
+		(property "Description" "RT0603FRE073K6L"
+			(at 177.8 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 177.8 137.16 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 177.8 137.16 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3790,7 +4773,7 @@
 		(at 154.94 80.01 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp yes)
 		(fields_autoplaced yes)
@@ -3832,6 +4815,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 154.94 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
 			(at 154.94 80.01 0)
 			(effects
 				(font
@@ -3901,7 +4893,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "06035A104JAT2A"
+			(at 48.26 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 48.26 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Kyocera"
 			(at 48.26 181.61 0)
 			(effects
 				(font
@@ -4059,7 +5069,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 177.8 134.62 90)
+		(at 177.8 128.27 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4068,7 +5078,7 @@
 		(fields_autoplaced yes)
 		(uuid "6c5fc431-1b00-4843-a2a9-9140144b2fad")
 		(property "Reference" "R25"
-			(at 177.8 128.27 90)
+			(at 177.8 121.92 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4076,7 +5086,7 @@
 			)
 		)
 		(property "Value" "3.6k"
-			(at 177.8 130.81 90)
+			(at 177.8 124.46 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4084,7 +5094,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder"
-			(at 177.8 136.398 90)
+			(at 177.8 130.048 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4093,7 +5103,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 177.8 134.62 0)
+			(at 177.8 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4101,8 +5111,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 177.8 134.62 0)
+		(property "Description" "RT0603FRE073K6L"
+			(at 177.8 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 177.8 128.27 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 177.8 128.27 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4171,7 +5199,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0603N100J250CT"
+			(at 76.2 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 76.2 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Walsin"
 			(at 76.2 67.31 0)
 			(effects
 				(font
@@ -4241,7 +5287,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Dual SoundPlus High Performance, Bipolar-Input Audio Operational Amplifiers, SOIC-8"
+		(property "Description" "OPA1612AIDR"
+			(at 157.48 176.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 157.48 176.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "TI"
 			(at 157.48 176.53 0)
 			(effects
 				(font
@@ -4393,8 +5457,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "RT0603FRE073K6L"
 			(at 176.53 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 176.53 35.56 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 176.53 35.56 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4461,8 +5543,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "RT0603FRE073K6L"
 			(at 48.26 21.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 48.26 21.59 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 48.26 21.59 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4487,7 +5587,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 49.53 134.62 90)
+		(at 49.53 128.27 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4496,7 +5596,7 @@
 		(fields_autoplaced yes)
 		(uuid "889b9b9f-c830-4207-b912-78e9a9add36b")
 		(property "Reference" "R13"
-			(at 49.53 128.27 90)
+			(at 49.53 121.92 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4504,7 +5604,7 @@
 			)
 		)
 		(property "Value" "3.6k"
-			(at 49.53 130.81 90)
+			(at 49.53 124.46 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4512,7 +5612,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder"
-			(at 49.53 136.398 90)
+			(at 49.53 130.048 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4521,7 +5621,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 49.53 134.62 0)
+			(at 49.53 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4529,8 +5629,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 49.53 134.62 0)
+		(property "Description" "RT0603FRE073K6L"
+			(at 49.53 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 49.53 128.27 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 49.53 128.27 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4597,8 +5715,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "MCT06030C1400FP500"
 			(at 110.49 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 110.49 49.53 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Vishay"
+			(at 110.49 49.53 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4665,8 +5801,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "RT0603FRE073K6L"
 			(at 48.26 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 48.26 35.56 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 48.26 35.56 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4684,6 +5838,209 @@
 			(project ""
 				(path "/6f51e767-ed01-41e4-a7dd-0d99192735f8/7ccfed61-ee2c-4610-a4d8-691e93773152"
 					(reference "R11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Custom:PJRAN2X1U01AUX")
+		(at 135.89 95.25 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "8fc25f12-dc20-46f5-93fe-6df7fc913bd1")
+		(property "Reference" "J5"
+			(at 143.764 94.742 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "AUDIO OUT"
+			(at 143.764 97.282 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Custom:SWITCHCRAFT_PJRAN2X1U01AUX"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "3.20mm ID, 9.00mm OD _RCA_ Phono _RCA_ Jack Mono Connector Solder"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "MF" "Switchcraft Inc."
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "PACKAGE" "None"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "PRICE" "None"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Package" "None"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Check_prices" "https://www.snapeda.com/parts/PJRAN2X1U01AUX/SWITCHCRAFT/view-part/?ref=eda"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Price" "None"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "SnapEDA_Link" "https://www.snapeda.com/parts/PJRAN2X1U01AUX/SWITCHCRAFT/view-part/?ref=snap"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "MP" "PJRAN2X1U01AUX"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Availability" "In Stock"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "AVAILABILITY" "Unavailable"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Description_1" "2 POS RA PH JK R-W G | Switchcraft PJRAN2X1U01AUX"
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 135.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2_A"
+			(uuid "576c4b56-82c1-45b2-8f13-300de4f68417")
+		)
+		(pin "2_B"
+			(uuid "9cae368b-08d6-465d-8902-d755a6e72044")
+		)
+		(pin "1_A"
+			(uuid "1f4a1165-94a4-4564-aaff-185329801d82")
+		)
+		(pin "3_B"
+			(uuid "42d8a64e-6a30-4a75-a62a-993b0a08c803")
+		)
+		(pin "3_A"
+			(uuid "d8cc840e-0d99-46dc-a662-105aaa5aba3b")
+		)
+		(pin "1_B"
+			(uuid "e46634bb-94f7-4757-bef9-be51a63666c8")
+		)
+		(instances
+			(project "dac"
+				(path "/6f51e767-ed01-41e4-a7dd-0d99192735f8/7ccfed61-ee2c-4610-a4d8-691e93773152"
+					(reference "J5")
 					(unit 1)
 				)
 			)
@@ -4733,8 +6090,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "RT0603FRE073K6L"
 			(at 176.53 21.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 176.53 21.59 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 176.53 21.59 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4759,7 +6134,7 @@
 	)
 	(symbol
 		(lib_id "power:GNDA")
-		(at 257.81 121.92 0)
+		(at 250.19 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4768,7 +6143,7 @@
 		(fields_autoplaced yes)
 		(uuid "92f1c9fc-7d6d-4e70-a055-92aa6667e7aa")
 		(property "Reference" "#PWR018"
-			(at 257.81 128.27 0)
+			(at 250.19 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4777,7 +6152,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 257.81 127 0)
+			(at 250.19 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4785,7 +6160,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 257.81 121.92 0)
+			(at 250.19 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4794,7 +6169,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 257.81 121.92 0)
+			(at 250.19 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4803,7 +6178,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
-			(at 257.81 121.92 0)
+			(at 250.19 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4867,7 +6242,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Dual SoundPlus High Performance, Bipolar-Input Audio Operational Amplifiers, SOIC-8"
+		(property "Description" "OPA1612AIDR"
+			(at 179.07 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 179.07 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "TI"
 			(at 179.07 63.5 0)
 			(effects
 				(font
@@ -4880,25 +6273,25 @@
 			(uuid "0c2f7f04-5311-47d3-aaf8-b080b256c461")
 		)
 		(pin "5"
-			(uuid "3240eabb-a7ae-433b-b1df-24bdf567f583")
+			(uuid "3240eabb-a7ae-433b-b1df-24bdf567f584")
 		)
 		(pin "1"
 			(uuid "1c4d7351-6bc0-4cfa-ac4c-af786da17901")
 		)
 		(pin "6"
-			(uuid "f918371d-e475-4b46-8832-6b6b99e5220d")
+			(uuid "f918371d-e475-4b46-8832-6b6b99e5220e")
 		)
 		(pin "8"
-			(uuid "48ababd9-3f82-4faa-bcea-1826d60e8898")
+			(uuid "48ababd9-3f82-4faa-bcea-1826d60e8899")
 		)
 		(pin "4"
-			(uuid "ef26d31b-3180-48be-94be-5f174d9ecacc")
+			(uuid "ef26d31b-3180-48be-94be-5f174d9ecacd")
 		)
 		(pin "3"
 			(uuid "031b799c-731f-4acc-8286-f228ca02a0d2")
 		)
 		(pin "7"
-			(uuid "667cd1e1-474b-44d3-b9eb-7d1ddfe91ace")
+			(uuid "667cd1e1-474b-44d3-b9eb-7d1ddfe91acf")
 		)
 		(instances
 			(project "dac"
@@ -4953,7 +6346,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Dual SoundPlus High Performance, Bipolar-Input Audio Operational Amplifiers, SOIC-8"
+		(property "Description" "OPA1612AIDR"
+			(at 177.8 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 177.8 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "TI"
 			(at 177.8 104.14 0)
 			(effects
 				(font
@@ -4975,10 +6386,10 @@
 			(uuid "fc87abb2-944c-4f81-a95d-c89463805f26")
 		)
 		(pin "8"
-			(uuid "48ababd9-3f82-4faa-bcea-1826d60e8899")
+			(uuid "48ababd9-3f82-4faa-bcea-1826d60e889a")
 		)
 		(pin "4"
-			(uuid "ef26d31b-3180-48be-94be-5f174d9ecacd")
+			(uuid "ef26d31b-3180-48be-94be-5f174d9ecace")
 		)
 		(pin "3"
 			(uuid "65814aa9-f9d8-4b5e-a290-858c3d9960f9")
@@ -4996,8 +6407,211 @@
 		)
 	)
 	(symbol
+		(lib_id "Custom:PJRAN2X1U01AUX")
+		(at 262.89 95.25 0)
+		(mirror y)
+		(unit 2)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "9fb7cbf1-f481-44bc-8ae7-0cca85bcb1e6")
+		(property "Reference" "J5"
+			(at 271.78 97.1012 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "AUDIO OUT"
+			(at 271.78 94.5612 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Custom:SWITCHCRAFT_PJRAN2X1U01AUX"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "3.20mm ID, 9.00mm OD _RCA_ Phono _RCA_ Jack Mono Connector Solder"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "MF" "Switchcraft Inc."
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "PACKAGE" "None"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "PRICE" "None"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Package" "None"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Check_prices" "https://www.snapeda.com/parts/PJRAN2X1U01AUX/SWITCHCRAFT/view-part/?ref=eda"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Price" "None"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "SnapEDA_Link" "https://www.snapeda.com/parts/PJRAN2X1U01AUX/SWITCHCRAFT/view-part/?ref=snap"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "MP" "PJRAN2X1U01AUX"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Availability" "In Stock"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "AVAILABILITY" "Unavailable"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Description_1" "2 POS RA PH JK R-W G | Switchcraft PJRAN2X1U01AUX"
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 262.89 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2_A"
+			(uuid "e3748070-9fec-475f-9015-de41b840326c")
+		)
+		(pin "1_B"
+			(uuid "a8f30eeb-c3ec-4ef5-b036-1792855eb8e7")
+		)
+		(pin "3_A"
+			(uuid "78856c14-cad7-4266-840a-edc9f070e50a")
+		)
+		(pin "3_B"
+			(uuid "a63b15e8-5e0a-4427-aa92-1cb199c99489")
+		)
+		(pin "1_A"
+			(uuid "16d6996c-17d1-4813-8052-afa0667df547")
+		)
+		(pin "2_B"
+			(uuid "b607620e-9b72-4634-a716-537b5b4f8f50")
+		)
+		(instances
+			(project ""
+				(path "/6f51e767-ed01-41e4-a7dd-0d99192735f8/7ccfed61-ee2c-4610-a4d8-691e93773152"
+					(reference "J5")
+					(unit 2)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C")
-		(at 257.81 111.76 180)
+		(at 246.38 111.76 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -5006,7 +6620,7 @@
 		(fields_autoplaced yes)
 		(uuid "a3a1d336-69b9-493a-afd6-35fa4e858b61")
 		(property "Reference" "C21"
-			(at 261.62 110.4899 0)
+			(at 250.19 110.4899 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5015,7 +6629,7 @@
 			)
 		)
 		(property "Value" "2.2n"
-			(at 261.62 113.0299 0)
+			(at 250.19 113.0299 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5024,7 +6638,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 256.8448 107.95 0)
+			(at 245.4148 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5033,7 +6647,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 257.81 111.76 0)
+			(at 246.38 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5041,8 +6655,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
-			(at 257.81 111.76 0)
+		(property "Description" "0603N222G250CT"
+			(at 246.38 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 246.38 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Walsin"
+			(at 246.38 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5109,8 +6741,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "GRM1885C1H511JA01D"
 			(at 176.53 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 176.53 49.53 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Murata"
+			(at 176.53 49.53 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5179,7 +6829,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0603N222G250CT"
+			(at 257.81 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 257.81 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Walsin"
 			(at 257.81 55.88 0)
 			(effects
 				(font
@@ -5249,7 +6917,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0603N222G250CT"
+			(at 129.54 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 129.54 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Walsin"
 			(at 129.54 55.88 0)
 			(effects
 				(font
@@ -5449,7 +7135,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Dual SoundPlus High Performance, Bipolar-Input Audio Operational Amplifiers, SOIC-8"
+		(property "Description" "OPA1612AIDR"
+			(at 49.53 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 49.53 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "TI"
 			(at 49.53 104.14 0)
 			(effects
 				(font
@@ -5459,28 +7163,28 @@
 			)
 		)
 		(pin "2"
-			(uuid "7a6952e9-a602-408d-a83c-dc26378c8465")
+			(uuid "7a6952e9-a602-408d-a83c-dc26378c8468")
 		)
 		(pin "5"
-			(uuid "3240eabb-a7ae-433b-b1df-24bdf567f583")
+			(uuid "3240eabb-a7ae-433b-b1df-24bdf567f586")
 		)
 		(pin "1"
-			(uuid "0fa24c9f-f62f-45bb-ab9a-cb1b4da4365b")
+			(uuid "0fa24c9f-f62f-45bb-ab9a-cb1b4da4365e")
 		)
 		(pin "6"
-			(uuid "f918371d-e475-4b46-8832-6b6b99e5220d")
+			(uuid "f918371d-e475-4b46-8832-6b6b99e52210")
 		)
 		(pin "8"
-			(uuid "48ababd9-3f82-4faa-bcea-1826d60e8898")
+			(uuid "48ababd9-3f82-4faa-bcea-1826d60e889b")
 		)
 		(pin "4"
-			(uuid "ef26d31b-3180-48be-94be-5f174d9ecacc")
+			(uuid "ef26d31b-3180-48be-94be-5f174d9ecacf")
 		)
 		(pin "3"
-			(uuid "65814aa9-f9d8-4b5e-a290-858c3d9960f8")
+			(uuid "65814aa9-f9d8-4b5e-a290-858c3d9960fb")
 		)
 		(pin "7"
-			(uuid "667cd1e1-474b-44d3-b9eb-7d1ddfe91ace")
+			(uuid "667cd1e1-474b-44d3-b9eb-7d1ddfe91ad1")
 		)
 		(instances
 			(project ""
@@ -5535,8 +7239,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "MCT06030C1400FP500"
 			(at 110.49 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 110.49 104.14 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Vishay"
+			(at 110.49 104.14 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5561,7 +7283,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 49.53 146.05 90)
+		(at 49.53 138.43 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -5570,7 +7292,7 @@
 		(fields_autoplaced yes)
 		(uuid "c06e16e0-b0de-4773-83d3-acca7c40d42a")
 		(property "Reference" "R14"
-			(at 49.53 139.7 90)
+			(at 49.53 132.08 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5578,7 +7300,7 @@
 			)
 		)
 		(property "Value" "3.6k"
-			(at 49.53 142.24 90)
+			(at 49.53 134.62 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5586,7 +7308,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder"
-			(at 49.53 147.828 90)
+			(at 49.53 140.208 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5595,7 +7317,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 49.53 146.05 0)
+			(at 49.53 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5603,8 +7325,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 49.53 146.05 0)
+		(property "Description" "RT0603FRE073K6L"
+			(at 49.53 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 49.53 138.43 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Yaego"
+			(at 49.53 138.43 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5673,7 +7413,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "06035A104JAT2A"
+			(at 137.16 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 137.16 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Kyocera"
 			(at 137.16 181.61 0)
 			(effects
 				(font
@@ -5741,7 +7499,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Dual SoundPlus High Performance, Bipolar-Input Audio Operational Amplifiers, SOIC-8"
+		(property "Description" "OPA1612AIDR"
+			(at 50.8 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 50.8 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "TI"
 			(at 50.8 63.5 0)
 			(effects
 				(font
@@ -5751,28 +7527,28 @@
 			)
 		)
 		(pin "2"
-			(uuid "7a6952e9-a602-408d-a83c-dc26378c8465")
+			(uuid "7a6952e9-a602-408d-a83c-dc26378c8469")
 		)
 		(pin "5"
-			(uuid "3240eabb-a7ae-433b-b1df-24bdf567f583")
+			(uuid "3240eabb-a7ae-433b-b1df-24bdf567f587")
 		)
 		(pin "1"
-			(uuid "0fa24c9f-f62f-45bb-ab9a-cb1b4da4365b")
+			(uuid "0fa24c9f-f62f-45bb-ab9a-cb1b4da4365f")
 		)
 		(pin "6"
-			(uuid "f918371d-e475-4b46-8832-6b6b99e5220d")
+			(uuid "f918371d-e475-4b46-8832-6b6b99e52211")
 		)
 		(pin "8"
-			(uuid "48ababd9-3f82-4faa-bcea-1826d60e8898")
+			(uuid "48ababd9-3f82-4faa-bcea-1826d60e889c")
 		)
 		(pin "4"
-			(uuid "ef26d31b-3180-48be-94be-5f174d9ecacc")
+			(uuid "ef26d31b-3180-48be-94be-5f174d9ecad0")
 		)
 		(pin "3"
-			(uuid "65814aa9-f9d8-4b5e-a290-858c3d9960f8")
+			(uuid "65814aa9-f9d8-4b5e-a290-858c3d9960fc")
 		)
 		(pin "7"
-			(uuid "667cd1e1-474b-44d3-b9eb-7d1ddfe91ace")
+			(uuid "667cd1e1-474b-44d3-b9eb-7d1ddfe91ad2")
 		)
 		(instances
 			(project ""
@@ -5788,7 +7564,7 @@
 		(at 96.52 93.98 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -5829,7 +7605,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "ERA-1AEB472C"
+			(at 96.52 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 96.52 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Panasonic"
 			(at 96.52 93.98 0)
 			(effects
 				(font
@@ -5858,7 +7652,7 @@
 		(at 204.47 95.25 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp yes)
 		(fields_autoplaced yes)
@@ -5900,6 +7694,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 204.47 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
 			(at 204.47 95.25 0)
 			(effects
 				(font
@@ -5967,8 +7770,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "MCT06030C1400FP500"
 			(at 238.76 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 238.76 49.53 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Vishay"
+			(at 238.76 49.53 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6037,7 +7858,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0603N100J250CT"
+			(at 204.47 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 204.47 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Walsin"
 			(at 204.47 67.31 0)
 			(effects
 				(font
@@ -6066,7 +7905,7 @@
 		(at 26.67 80.01 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp yes)
 		(fields_autoplaced yes)
@@ -6108,6 +7947,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 26.67 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
 			(at 26.67 80.01 0)
 			(effects
 				(font
@@ -6177,7 +8025,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "06035A104JAT2A"
+			(at 137.16 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 137.16 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Kyocera"
 			(at 137.16 171.45 0)
 			(effects
 				(font
@@ -6203,7 +8069,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 129.54 111.76 180)
+		(at 120.65 111.76 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -6212,7 +8078,7 @@
 		(fields_autoplaced yes)
 		(uuid "f45da7e8-d7a1-41b2-85cc-4a09120a5c71")
 		(property "Reference" "C15"
-			(at 133.35 110.4899 0)
+			(at 124.46 110.4899 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6221,7 +8087,7 @@
 			)
 		)
 		(property "Value" "2.2n"
-			(at 133.35 113.0299 0)
+			(at 124.46 113.0299 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6230,7 +8096,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 128.5748 107.95 0)
+			(at 119.6848 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6239,7 +8105,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 129.54 111.76 0)
+			(at 120.65 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6247,8 +8113,26 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
-			(at 129.54 111.76 0)
+		(property "Description" "0603N222G250CT"
+			(at 120.65 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Venor" ""
+			(at 120.65 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Vendor" "Walsin"
+			(at 120.65 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)

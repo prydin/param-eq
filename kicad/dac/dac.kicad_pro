@@ -58,7 +58,64 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "silk_edge_clearance|117250000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|28f75f51-cb04-4f4a-8e2f-5eecf197c749",
+          ""
+        ],
+        [
+          "silk_edge_clearance|117250000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|44d0e147-4842-457b-901a-8753752ca1fa",
+          ""
+        ],
+        [
+          "silk_edge_clearance|118100000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|ff886764-bf15-4cbb-8e78-4f618d3c9d58",
+          ""
+        ],
+        [
+          "silk_edge_clearance|126400000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|830e5fdd-ee7b-46e2-9aa4-0200e8e2405b",
+          ""
+        ],
+        [
+          "silk_edge_clearance|126400000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|a113f2e3-569e-445b-8437-ddc4d47977f3",
+          ""
+        ],
+        [
+          "silk_edge_clearance|133100000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|a19f9883-5185-4f99-a2f4-1b9ffaeb8835",
+          ""
+        ],
+        [
+          "silk_edge_clearance|141400000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|cbbf804a-46de-4be1-a76c-5b8a2ee529ef",
+          ""
+        ],
+        [
+          "silk_edge_clearance|141400000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|e34dc88a-7db3-44ae-8854-eab382251b20",
+          ""
+        ],
+        [
+          "silk_edge_clearance|142250000|136000000|53128779-6b49-454d-b0e1-0c733c9dbff0|9818078c-0565-4382-a554-9cae6cee0447",
+          ""
+        ],
+        [
+          "starved_thermal|105525000|107990000|fc669ed5-89d9-42ba-a7c3-0ff236fad1a6|2615d918-782e-46b5-9e0c-68371f8a85cb|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|105525000|109490000|fc669ed5-89d9-42ba-a7c3-0ff236fad1a6|bd63ebc6-bfca-41f9-b77c-a890ec7816f7|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|105525000|109490000|fc669ed5-89d9-42ba-a7c3-0ff236fad1a6|bd63ebc6-bfca-41f9-b77c-a890ec7816f7|F.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|106525000|107990000|fc669ed5-89d9-42ba-a7c3-0ff236fad1a6|8be3d302-40c6-43a7-ba86-7faa779f86eb|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|106525000|109490000|fc669ed5-89d9-42ba-a7c3-0ff236fad1a6|59a89d0d-06a6-49b3-92d7-edaa521d6042|B.Cu",
+          ""
+        ]
+      ],
       "meta": {
         "version": 2
       },
@@ -187,7 +244,8 @@
         }
       ],
       "track_widths": [
-        0.0
+        0.0,
+        0.5
       ],
       "tuning_pattern_settings": {
         "diff_pair_defaults": {
@@ -239,7 +297,16 @@
     "equivalence_files": []
   },
   "erc": {
-    "erc_exclusions": [],
+    "erc_exclusions": [
+      [
+        "pin_to_pin|1473200|723900|4b54958f-171b-4572-8f54-816c48c9a429|b23033bb-19b5-494e-b786-1134f7fe0362|/6f51e767-ed01-41e4-a7dd-0d99192735f8|/6f51e767-ed01-41e4-a7dd-0d99192735f8|/6f51e767-ed01-41e4-a7dd-0d99192735f8",
+        ""
+      ],
+      [
+        "pin_to_pin|1727200|977900|025cd3d2-3916-4cdf-a978-a705c2feca3f|b23033bb-19b5-494e-b786-1134f7fe0362|/6f51e767-ed01-41e4-a7dd-0d99192735f8|/6f51e767-ed01-41e4-a7dd-0d99192735f8|/6f51e767-ed01-41e4-a7dd-0d99192735f8",
+        ""
+      ]
+    ],
     "meta": {
       "version": 0
     },
@@ -573,12 +640,162 @@
           "label": "Datasheet",
           "name": "Datasheet",
           "show": true
+        },
+        {
+          "group_by": false,
+          "label": "Availability",
+          "name": "Availability",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Check_prices",
+          "name": "Check_prices",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Description_1",
+          "name": "Description_1",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Height",
+          "name": "Height",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MANUFACTURER",
+          "name": "MANUFACTURER",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MAXIMUM_PACKAGE_HEIGHT",
+          "name": "MAXIMUM_PACKAGE_HEIGHT",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MF",
+          "name": "MF",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MP",
+          "name": "MP",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Manufacturer_Name",
+          "name": "Manufacturer_Name",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Manufacturer_Part_Number",
+          "name": "Manufacturer_Part_Number",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Mouser Part Number",
+          "name": "Mouser Part Number",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Mouser Price/Stock",
+          "name": "Mouser Price/Stock",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "PACKAGE",
+          "name": "PACKAGE",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "PARTREV",
+          "name": "PARTREV",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "PRICE",
+          "name": "PRICE",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Package",
+          "name": "Package",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Price",
+          "name": "Price",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Purchase-URL",
+          "name": "Purchase-URL",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "STANDARD",
+          "name": "STANDARD",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "SnapEDA_Link",
+          "name": "SnapEDA_Link",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "AVAILABILITY",
+          "name": "AVAILABILITY",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Description",
+          "name": "Description",
+          "show": true
+        },
+        {
+          "group_by": false,
+          "label": "#",
+          "name": "${ITEM_NUMBER}",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Venor",
+          "name": "Venor",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Vendor",
+          "name": "Vendor",
+          "show": true
         }
       ],
       "filter_string": "",
       "group_symbols": true,
       "include_excluded_from_bom": true,
-      "name": "Default Editing",
+      "name": "",
       "sort_asc": true,
       "sort_field": "Reference"
     },
