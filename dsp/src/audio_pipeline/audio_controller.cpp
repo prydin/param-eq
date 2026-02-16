@@ -1,5 +1,8 @@
 #include <Arduino.h>
 #include "audio_controller.h"
+#include "netconv.h"
+
+uint32_t AudioController::sampleRate;
 
 AudioController::AudioController() : AudioComponent() {
     // This is OK since we're a singleton
@@ -14,7 +17,7 @@ void AudioController::process(AudioBuffer* block) {
         for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
             sample_t sample  = block->data[ch][i];
             clipped |= (sample > 1.0f) || (sample < -1.0f);
-            outputs[ch][i] = (int32_t)(max(-1.0f, min(1.0f, sample)) * 2147483647.0f);
+            outputs[ch][i] = (int32_t) (max(-1.0f, min(1.0f, sample)) * 2147483647.0f);
         }
     }
     if(clipped && !wasClipped) {

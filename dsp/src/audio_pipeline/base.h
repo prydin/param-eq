@@ -4,9 +4,12 @@
 #define AUDIO_CHANNELS 2
 #define BUFFER_POOL_SIZE 64
 
-#ifdef USE_DOUBLE_SAMPLE
+// #define USE_DOUBLE_SAMPLES
+
+#ifdef USE_DOUBLE_SAMPLES
 typedef double sample_t;
 #else
 typedef float sample_t;
 #endif
 #endif // BASE_H
+ 
