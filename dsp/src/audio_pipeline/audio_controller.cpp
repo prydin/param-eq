@@ -2,6 +2,8 @@
 #include "audio_controller.h"
 #include "netconv.h"
 
+uint32_t AudioController::sampleRate;
+
 AudioController::AudioController() : AudioComponent() {
     // This is OK since we're a singleton
     i2sAudioCallback = AudioController::processAudio;

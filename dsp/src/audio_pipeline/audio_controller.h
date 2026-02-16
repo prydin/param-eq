@@ -18,9 +18,14 @@ public:
         getInstance()->clipDetector = detector;
     }
 
-    static uint32_t getSampleRate() {
-        return audioInputI2S ? audioInputI2S->getSampleRate() : 44100;
+    void setSampleRate(uint32_t rate) {
+        getInstance()->sampleRate = rate;
     }
+
+    static uint32_t getSampleRate() {
+        return sampleRate ? sampleRate : (audioInputI2S ? audioInputI2S->getSampleRate() : 44100);
+    }
+
     static uint32_t getStandardizedSampleRate() {
         return audioInputI2S ? audioInputI2S->getStandardizedSampleRate() : 44100;
     }
@@ -32,6 +37,7 @@ private:
     AudioController();
     int32_t outputs[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES];
     void (*clipDetector)(bool clipped) = nullptr;
+    static uint32_t sampleRate;
 };
 
-#endif // AUDIO_CONTROLLER_H
+#endif // AUDIO_CONTROLLER_H 

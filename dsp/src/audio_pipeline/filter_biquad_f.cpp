@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "filter_biquad_f.h"
+#include "base.h"
 #include "arm_math.h"
 
 void AudioFilterBiquadFloat::process(AudioBuffer *block)

@@ -305,10 +305,10 @@ void setup()
 
 #ifdef ST7796_DRIVER
   // Deal with cheap ST7796 displays that have incorrect MADCTL settings
-  tft.setRotation(3);
+  //tft.setRotation(3);
   tft.begin_nin_write();
   tft.writecommand(ST7796_MADCTL);
-  tft.writedata(ST7796_MADCTL_MV | ST7796_MADCTL_MX | ST7796_MADCTL_BGR);
+  tft.writedata(ST7796_MADCTL_MV | ST7796_MADCTL_MX | ST7796_MADCTL_MH | ST7796_MADCTL_BGR);
   tft.end_nin_write();
   tft.invertDisplay(true);
 #endif

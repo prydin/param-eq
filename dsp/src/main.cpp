@@ -28,14 +28,21 @@
 #include "audio_pipeline/filter_biquad_f.h"
 #include "audio_pipeline/audio_square_wave.h"
 #include "audio_pipeline/audio_gain.h"
+#include "audio_pipeline/audio_rms.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
 
+//#define TESTMODE 1
+
+#ifdef TESTMODE
+#include "audio_pipeline/test_tone.h"
+#endif
+#include <ES9039Q2M.h>
+
 // Audio interrupt control macros
 #define AudioNoInterrupts() (NVIC_DISABLE_IRQ(IRQ_SOFTWARE))
-#define AudioInterrupts()   (NVIC_ENABLE_IRQ(IRQ_SOFTWARE))
-
+#define AudioInterrupts() (NVIC_ENABLE_IRQ(IRQ_SOFTWARE))
 
 // Filter control endpoints and steps
 #define MIN_GAIN_DB -15.0f
@@ -73,6 +80,9 @@
 // Dely before clearing clip indication
 #define CLIP_CLEAR_DELAY_MS 100
 
+// DAC instance
+ES9039Q2M dac;
+
 // Rotary encoders
 AcceleratedEncoder fcSelector(FC_PIN_A, FC_PIN_B);
 AcceleratedEncoder gainSelector(GAIN_PIN_A, GAIN_PIN_B);
@@ -85,11 +95,15 @@ OneButton filterTypeSelectButton(FILTER_TYPE_PIN, true);
 OneButton displayModeButton(FILTER_MODE_PIN, true);
 
 AudioSquareWave waveform;
+#ifdef TESTMODE
+TestTone testTone(1000, 96000);
+#endif
 
 // The filters
 AudioFilterBiquadFloat filter;
 
 AudioGain gain;
+AudioRMS rmsMeter;
 
 // User settings
 FilterSettings filterSettings[FILTER_BANDS];
@@ -271,20 +285,53 @@ void setup(void)
   // Build audio pipeline
   // Source -> Gain -> Filter -> I2S
   gain.addReceiver(&filter);
+  filter.addReceiver(&rmsMeter);
   filter.addReceiver(AudioController::getInstance());
+  gain.setGain(1.0f); // Initial gain to avoid clipping
 
-  // AudioController::getInstance()->addReceiver(&waveform);
+  #ifdef TESTMODE
+  testTone.addReceiver(&gain);
+  AudioController::getInstance()->addReceiver(&testTone);
+  #else
   AudioController::getInstance()->addReceiver(&gain);
+  #endif
   AudioController::getInstance()->setClipDetector(clipDetected);
-  gain.setGain(0.5f); // Reduce volume to avoid clipping
 
-  InitI2s(true);
-  waveform.setAmplitude(0.5f);
-  waveform.setFrequency(980.0f); // 980 Hz test tone
-  // waveform.addReceiver(&gain);
+  // Make sure pins 5 and 6 are in input mode (due to a PCB design issue)
+  pinMode(5, INPUT);
+  pinMode(6, INPUT);
+
+  // Initialize the DAC
+  dac.begin();
+  delay(500);
+  
+  // Reset the DAC
+  dac.writeRegister8(0x00, 0x82);
+  delay(500);
+
+  // Initial settings
+  dac.writeRegister8(0x00, 0x02);
+  dac.writeRegister8(0x01, 0xB1);
+  dac.writeRegister8(0x39, 0x41); // 41
+  dac.writeRegister8(0x56, 0x00);
+  dac.writeRegister8(0x7B, 0x00);
+  dac.setVolume(1.0f);
+  
 
   // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
   delay(100);
+
+#ifdef TESTMODE
+  InitI2s(false);
+  AudioController::getInstance()->setSampleRate(96000);
+
+  //testTone.begin();
+#else
+  InitI2s(true);
+#endif
+  // waveform.setAmplitude(0.5f);
+  // waveform.setFrequency(980.0f); // 980 Hz test tone
+  // waveform.addReceiver(&gain);
 
   // Initialize UI
   // Set all the rotary encoder pints to input mode
@@ -364,7 +411,7 @@ void setup(void)
   qSelector.setEndpoints(MIN_Q / Q_STEP, MAX_Q / Q_STEP);
   masterGainSelector.setAcceleratedPosition(0);
   masterGainSelector.setEndpoints(MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB, MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB); // -20 dB to 20 dB
-  masterGainSelector.setAcceleratedPosition(0); // 0 dB
+  masterGainSelector.setAcceleratedPosition(0);                                                                  // 0 dB
 
   // Initial display update
   updateAllFilters();
@@ -396,8 +443,12 @@ void loop(void)
   // Print CPU load every 2 seconds
   if (currentTime >= nextStatusPrint)
   {
+    Serial.println("----- Status -----");
     Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s\n", Timers::GetCpuLoad() * 100.0f, AudioController::getStandardizedSampleRate(), AudioController::isSampleRateStable() ? "true" : "false");
     nextStatusPrint = currentTime + 2000; // Print every 2 seconds
+    Serial.printf("RMS Level: %f, / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
+    Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
+    Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x\n", dac.readRegister8(0), dac.readRegister16(229), dac.readRegister8(245));
   }
 
   // Update clip indicator
@@ -409,7 +460,7 @@ void loop(void)
     Packet p;
     p.packetType = PACKET_CLIP_ALERT;
     p.data.clipAlert.clipped = 1;
-    //sendToDisplay(&p);
+    // sendToDisplay(&p);
   }
   else if (clipState == CLIP_ACTIVE)
   {
@@ -419,7 +470,7 @@ void loop(void)
       Packet p;
       p.packetType = PACKET_CLIP_ALERT;
       p.data.clipAlert.clipped = 0;
-      //sendToDisplay(&p);
+      // sendToDisplay(&p);
       digitalWrite(LED_BUILTIN, LOW);
     }
   }
@@ -457,18 +508,18 @@ void loop(void)
   float newGain = map(float(gainSelector.geAcceleratedPosition()), MIN_GAIN_DB / GAIN_STEP_DB,
                       MAX_GAIN_DB / GAIN_STEP_DB, MIN_GAIN_DB, MAX_GAIN_DB);
   float newMasterGain = map(float(masterGainSelector.geAcceleratedPosition()), MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB,
-                             MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB, MASTER_GAIN_MIN, MASTER_GAIN_MAX);
+                            MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB, MASTER_GAIN_MIN, MASTER_GAIN_MAX);
 
   // Update filters only if parameters changed
   settings = &filterSettings[selectedFilterBand]; // The band could have changed
-  if (newFrequency == settings->frequency && oldFilterType == settings->type && newGain == settings->gain && newQ == settings->Q && 
-    oldSelectedBand == selectedFilterBand && oldDisplayMode == displayMode && newMasterGain == oldMasterGain)
+  if (newFrequency == settings->frequency && oldFilterType == settings->type && newGain == settings->gain && newQ == settings->Q &&
+      oldSelectedBand == selectedFilterBand && oldDisplayMode == displayMode && newMasterGain == oldMasterGain)
   {
     // Save to EEPROM if needed
     unsigned long currentTime = millis();
     if (saveNeeded && currentTime - lastSaveTime > SAVE_INTERVAL_MS)
     {
-      PersistedSettings persistedSettings; 
+      PersistedSettings persistedSettings;
       for (int i = 0; i < FILTER_BANDS; i++)
       {
         persistedSettings.filterSettings[i] = filterSettings[i];
@@ -493,4 +544,4 @@ void loop(void)
   updateFilter(selectedFilterBand);
   updateDisplay();
   saveNeeded = true;
-} 
+}

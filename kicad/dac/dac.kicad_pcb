@@ -28398,18 +28398,6 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "GND"
-		(at 150.5 104 0)
-		(layer "F.SilkS")
-		(uuid "18e9b1a6-231f-4539-b3e3-62abfdcc412a")
-		(effects
-			(font
-				(size 1 1)
-				(thickness 0.1)
-			)
-			(justify left bottom)
-		)
-	)
 	(gr_text "1"
 		(at 144.25 78.5 0)
 		(layer "F.SilkS")
@@ -28518,7 +28506,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "-15V"
+	(gr_text "+15V"
 		(at 102.5 99.25 0)
 		(layer "F.SilkS")
 		(uuid "a0d88a5d-4dae-41c9-a2aa-fa447a0715b3")
@@ -28530,7 +28518,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "+15V"
+	(gr_text "-15V"
 		(at 102.5 94.75 0)
 		(layer "F.SilkS")
 		(uuid "a685f5a5-165c-4a62-a0d9-0750e209e065")
