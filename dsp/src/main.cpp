@@ -60,6 +60,9 @@
 #define MASTER_GAIN_STEP_DB 0.1f
 #define MASTER_GAIN_MIN -20.0f
 #define MASTER_GAIN_MAX 20.0f
+#define VOLUME_STEP_DB 1.0f
+#define VOLUME_MIN -127.0f
+#define VOLUME_MAX 0.0f
 
 // Rotary encoder pins
 #define FC_PIN_A 33
@@ -71,14 +74,21 @@
 #define Q_PIN_A 39
 #define Q_PIN_B 40
 #define FILTER_MODE_PIN 41
-#define MASTER_GAIN_PIN_A 1
-#define MASTER_GAIN_PIN_B 2
+#define INPUT_GAIN_PIN_A 2
+#define INPUT_GAIN_PIN_B 3
+#define VOLUME_PIN_A 11
+#define VOLUME_PIN_B 12
 
 // Settings save interval
 #define SAVE_INTERVAL_MS 5000
 
 // Dely before clearing clip indication
 #define CLIP_CLEAR_DELAY_MS 100
+
+// DAC initialization retries
+#define DAC_INIT_RETRIES 3
+#define DAC_INIT_DELAY_MS 200
+#define DAC_CHECK_PERIOD 5000
 
 // DAC instance
 ES9039Q2M dac;
@@ -87,7 +97,8 @@ ES9039Q2M dac;
 AcceleratedEncoder fcSelector(FC_PIN_A, FC_PIN_B);
 AcceleratedEncoder gainSelector(GAIN_PIN_A, GAIN_PIN_B);
 AcceleratedEncoder qSelector(Q_PIN_A, Q_PIN_B);
-AcceleratedEncoder masterGainSelector(MASTER_GAIN_PIN_A, MASTER_GAIN_PIN_B);
+AcceleratedEncoder masterGainSelector(INPUT_GAIN_PIN_A, INPUT_GAIN_PIN_B);
+AcceleratedEncoder volumeSelector(VOLUME_PIN_A, VOLUME_PIN_B);
 
 // Pushbuttons
 OneButton filterSelectButton(FILTER_INDEX_PIN, true);
@@ -110,10 +121,14 @@ FilterSettings filterSettings[FILTER_BANDS];
 int selectedFilterBand = LOW_BAND;
 int displayMode = DISPLAY_MODE_INDIVIDUAL;
 float masterGain = 0.0f;
+float volume = 0.0f;
 
 // Last time settings were saved to EEPROM
 unsigned long lastSaveTime = 0;
 bool saveNeeded = false;
+
+// DAC state
+bool dacRunning = false;
 
 // Clipping state
 typedef enum ClipState
@@ -202,6 +217,48 @@ void updateDisplay()
   }
   sendToDisplay(&packet);
 }
+
+bool checkDAC()
+{
+  return dac.getChipID() != 0;
+}
+
+/**
+ * @brief Initializes the ES9039Q2M DAC with default settings.
+ *
+ * This function performs a reset of the DAC, applies initial configuration settings,
+ * and sets the initial volume level based on the global `volume` variable.
+ *
+ * @note The DAC is reset by writing 0x82 to register 0x00, followed by a delay of 500 ms.
+ * @note Initial configuration includes setting system config, volume, and other necessary
+ *       registers for proper operation.
+ * @note The volume is set in decibels (dB) using the setVolumeDB() method of the DAC class.
+ */
+void initDAC()
+{
+  // Reset the DAC
+  for(int i = 0; i < DAC_INIT_RETRIES; i++) {
+    dac.writeRegister8(0x00, 0x82);
+    delay(DAC_INIT_DELAY_MS);
+    if(checkDAC() != 0) {
+      dacRunning = true;
+      break; // Exit loop if DAC responds
+    }
+  }
+  if(!dacRunning) {
+    Serial.println("Failed to initialize DAC after multiple attempts.");
+    return;
+  }
+
+  // Initial settings
+  dac.writeRegister8(0x00, 0x02);
+  dac.writeRegister8(0x01, 0xB1);
+  dac.writeRegister8(0x39, 0x41); // 41
+  dac.writeRegister8(0x56, 0x00);
+  dac.writeRegister8(0x7B, 0x00);
+  dac.setVolumeDB(volume);
+}
+
 
 /**
  * @brief Updates the filter coefficients for the selected filter band.
@@ -303,21 +360,9 @@ void setup(void)
 
   // Initialize the DAC
   dac.begin();
-  delay(500);
+  delay(500); // Wait for DAC to stabilize
+  initDAC();
   
-  // Reset the DAC
-  dac.writeRegister8(0x00, 0x82);
-  delay(500);
-
-  // Initial settings
-  dac.writeRegister8(0x00, 0x02);
-  dac.writeRegister8(0x01, 0xB1);
-  dac.writeRegister8(0x39, 0x41); // 41
-  dac.writeRegister8(0x56, 0x00);
-  dac.writeRegister8(0x7B, 0x00);
-  dac.setVolume(1.0f);
-  
-
   // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
   delay(100);
 
@@ -343,8 +388,8 @@ void setup(void)
   pinMode(FILTER_INDEX_PIN, INPUT);
   pinMode(Q_PIN_A, INPUT);
   pinMode(Q_PIN_B, INPUT);
-  pinMode(MASTER_GAIN_PIN_A, INPUT_PULLUP);
-  pinMode(MASTER_GAIN_PIN_B, INPUT_PULLUP);
+  pinMode(INPUT_GAIN_PIN_A, INPUT_PULLUP);
+  pinMode(INPUT_GAIN_PIN_B, INPUT_PULLUP);
 
   // Initialize clip LED
   pinMode(LED_BUILTIN, OUTPUT);
@@ -385,6 +430,8 @@ void setup(void)
     }
     selectedFilterBand = persistedSettings.selectedFilterBand;
     displayMode = persistedSettings.displayMode;
+    volume = persistedSettings.volume;
+    dac.setVolumeDB(volume);
     Serial.println("Loaded persisted settings from EEPROM.");
   }
   else
@@ -412,6 +459,8 @@ void setup(void)
   masterGainSelector.setAcceleratedPosition(0);
   masterGainSelector.setEndpoints(MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB, MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB); // -20 dB to 20 dB
   masterGainSelector.setAcceleratedPosition(0);                                                                  // 0 dB
+  volumeSelector.setEndpoints(VOLUME_MIN / VOLUME_STEP_DB, VOLUME_MAX / VOLUME_STEP_DB);
+  volumeSelector.setAcceleratedPosition(0); // 0 dB
 
   // Initial display update
   updateAllFilters();
@@ -438,7 +487,20 @@ void setup(void)
 void loop(void)
 {
   static time_t nextStatusPrint = 0;
+  static time_t lastDACCheck = 0;
   time_t currentTime = millis();
+
+  if(currentTime - lastDACCheck > DAC_CHECK_PERIOD) { // Check DAC every 5 seconds
+    if(!checkDAC()) {
+      dacRunning = false;
+      Serial.println("Lost contact with DAC!.");
+    } else if(!dacRunning) {
+      // DAC came back to life, reinitialize it
+      Serial.println("DAC came back online. Re-initializing.");
+      initDAC();
+    }
+    lastDACCheck = currentTime;
+  }
 
   // Print CPU load every 2 seconds
   if (currentTime >= nextStatusPrint)
@@ -448,7 +510,7 @@ void loop(void)
     nextStatusPrint = currentTime + 2000; // Print every 2 seconds
     Serial.printf("RMS Level: %f, / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
     Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
-    Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x\n", dac.readRegister8(0), dac.readRegister16(229), dac.readRegister8(245));
+    Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x, volume=%f dB\n", dac.readRegister8(0), dac.readRegister16(229), dac.readRegister8(245), dac.getCH1Volume());
   }
 
   // Update clip indicator
@@ -488,6 +550,7 @@ void loop(void)
   filterSelectButton.tick();     // May change selectedFilterBand!
   displayModeButton.tick();      // May change displayMode!
   masterGainSelector.tick();     // May change master gain!
+  volumeSelector.tick();         // May change volume!
 
   // If the filter band changed, we have to update all the rotary encoders to reflect current settings
   if (oldSelectedBand != selectedFilterBand)
@@ -509,11 +572,13 @@ void loop(void)
                       MAX_GAIN_DB / GAIN_STEP_DB, MIN_GAIN_DB, MAX_GAIN_DB);
   float newMasterGain = map(float(masterGainSelector.geAcceleratedPosition()), MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB,
                             MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB, MASTER_GAIN_MIN, MASTER_GAIN_MAX);
+  float newVolume = map(float(volumeSelector.geAcceleratedPosition()), VOLUME_MIN / VOLUME_STEP_DB,
+                         VOLUME_MAX / VOLUME_STEP_DB, VOLUME_MIN, VOLUME_MAX);  
 
   // Update filters only if parameters changed
   settings = &filterSettings[selectedFilterBand]; // The band could have changed
   if (newFrequency == settings->frequency && oldFilterType == settings->type && newGain == settings->gain && newQ == settings->Q &&
-      oldSelectedBand == selectedFilterBand && oldDisplayMode == displayMode && newMasterGain == oldMasterGain)
+      oldSelectedBand == selectedFilterBand && oldDisplayMode == displayMode && newMasterGain == oldMasterGain && newVolume == volume)
   {
     // Save to EEPROM if needed
     unsigned long currentTime = millis();
@@ -526,6 +591,7 @@ void loop(void)
       }
       persistedSettings.selectedFilterBand = selectedFilterBand;
       persistedSettings.displayMode = displayMode;
+      persistedSettings.volume = volume;
       saveSettings(persistedSettings);
       lastSaveTime = currentTime;
       Serial.println("Settings saved to EEPROM.");
@@ -533,11 +599,16 @@ void loop(void)
     }
     return;
   }
-  Serial.printf("Frequency: %f Hz, Master gain: %f dB\n", newFrequency, newMasterGain);
+  Serial.printf("Frequency: %f Hz, Master gain: %f dB, Volume: %f dB\n", newFrequency, newMasterGain, newVolume);
   settings->frequency = newFrequency;
   settings->gain = newGain;
   settings->Q = newQ;
   masterGain = newMasterGain;
+  if(volume != newVolume) {
+    volume = newVolume;
+    Serial.printf("Setting volume to %f dB\n", volume);
+    dac.setVolumeDB(volume);
+  }
   gain.setGain(powf(10.0f, masterGain / 20.0f)); // Convert dB to linear
 
   // Set up filter according to type
