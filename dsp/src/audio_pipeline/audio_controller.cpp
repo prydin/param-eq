@@ -10,6 +10,10 @@ AudioController::AudioController() : AudioComponent() {
 }
 
 void AudioController::process(AudioBuffer* block) {
+    // Running the audio chain with unstable sample rate can cause weird behavior.
+    if(!getInstance()->enabled || !isSampleRateStable()) {
+        return;
+    }
     // This is the final destination - convert samples to int32 for output
     static bool wasClipped = false;
     bool clipped = false;
@@ -34,6 +38,10 @@ void AudioController::process(AudioBuffer* block) {
 }
 void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
 {
+    // Running the audio chain with unstable sample rate can cause weird behavior.
+    if(!getInstance()->enabled || !isSampleRateStable()) {
+        return;
+    }
     AudioBuffer* buffer = AudioBufferPool::getInstance().getBuffer();
     
     // Convert inputs from int32 to float

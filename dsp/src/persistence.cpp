@@ -4,7 +4,7 @@
 
 // EEPROM layout constants
 #define EEPROM_MAGIC (0x50455145) // 'PEQE' in ASCII
-#define EEPROM_VERSION 3
+#define EEPROM_VERSION 1
 #define EEPROM_START_ADDR 0
  
 /**

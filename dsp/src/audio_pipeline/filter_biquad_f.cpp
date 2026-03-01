@@ -46,7 +46,6 @@ void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, f
             break;
         }
     }
-    digitalWriteFast(LED_BUILTIN, clipped ? HIGH : LOW);
 }
 
 void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)

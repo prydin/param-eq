@@ -48,7 +48,7 @@ public:
     void setPeakingEQ(uint32_t stage, double frequency, double q, double gain);
     void bypass(uint32_t stage);    
 
-    // private:
+private:
     sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];
     sample_t state[AUDIO_CHANNELS][NUM_STATES * MAX_BIQUAD_STAGES]; // extra space for safety
     uint32_t num_stages = 0;                                     // number of stages in use

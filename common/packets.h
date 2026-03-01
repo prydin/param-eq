@@ -6,7 +6,7 @@
 
 #define PACKET_COEFFS 0x01
 #define PACKET_PARAMS 0x02
-#define PACKET_LEVELS 0x030
+#define PACKET_LEVELS 0x03
 #define PACKET_SAMPLE_RATE 0x04
 #define PACKET_CLIP_ALERT 0x05
 
@@ -38,7 +38,7 @@ typedef struct {
             uint32_t gain;
             } params[FILTER_BANDS];
         struct {
-            uint32_t peakLevel;
+            uint32_t peakLevel;  
             uint32_t rmsLevel;
         } status;
         struct {

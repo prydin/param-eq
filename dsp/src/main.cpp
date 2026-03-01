@@ -107,7 +107,7 @@ OneButton displayModeButton(FILTER_MODE_PIN, true);
 
 AudioSquareWave waveform;
 #ifdef TESTMODE
-TestTone testTone(1000, 96000);
+TestTone testTone(1000, 48000);
 #endif
 
 // The filters
@@ -415,7 +415,6 @@ void setup(void)
   pinMode(A11, INPUT);
   pinMode(A12, INPUT);
   pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH); // Chip select high
 
   // Reset last save time
   lastSaveTime = millis();
@@ -468,6 +467,23 @@ void setup(void)
 }
 
 /**
+ * This function is called from the loop and blinks the buiitin LED once a second.
+ */
+void blinkLED()
+{
+  static time_t nextToggle = 0;
+  static bool state = false;
+  time_t currentTime = millis();
+  if (currentTime >= nextToggle)
+  {
+    digitalWrite(LED_BUILTIN, state ? HIGH : LOW);
+    state = !state;
+    Serial.printf("Flipped state to %d\n", state);
+    nextToggle = currentTime + 500; // Toggle every second
+  }
+}
+
+/**
  * @brief Main loop function that handles rotary encoder input and updates audio filters.
  *
  * This function is called repeatedly to:
@@ -498,13 +514,18 @@ void loop(void)
       // DAC came back to life, reinitialize it
       Serial.println("DAC came back online. Re-initializing.");
       initDAC();
+      digitalWrite(LED_BUILTIN, LOW); // Turn off clip LED if it was on due to DAC failure
     }
     lastDACCheck = currentTime;
   }
 
+  if(!dacRunning) {
+    blinkLED();
+  }
+
   // Print CPU load every 2 seconds
   if (currentTime >= nextStatusPrint)
-  {
+      {
     Serial.println("----- Status -----");
     Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s\n", Timers::GetCpuLoad() * 100.0f, AudioController::getStandardizedSampleRate(), AudioController::isSampleRateStable() ? "true" : "false");
     nextStatusPrint = currentTime + 2000; // Print every 2 seconds
@@ -513,27 +534,28 @@ void loop(void)
     Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x, volume=%f dB\n", dac.readRegister8(0), dac.readRegister16(229), dac.readRegister8(245), dac.getCH1Volume());
   }
 
-  // Update clip indicator
-  if (clipState == CLIP_TRIGGERED)
-  {
-    clipState = CLIP_ACTIVE;
-    clipTimestamp = millis();
-    digitalWrite(LED_BUILTIN, HIGH);
-    Packet p;
-    p.packetType = PACKET_CLIP_ALERT;
-    p.data.clipAlert.clipped = 1;
-    // sendToDisplay(&p);
-  }
-  else if (clipState == CLIP_ACTIVE)
-  {
-    if ((millis() - clipTimestamp) > CLIP_CLEAR_DELAY_MS)
+  // Update clip indicator. Don't bother with this if the DAC is not running.
+  if(dacRunning) {
+    if (clipState == CLIP_TRIGGERED)
     {
-      clipState = NO_CLIP;
+      clipState = CLIP_ACTIVE;
+      clipTimestamp = millis();
+      digitalWrite(LED_BUILTIN, HIGH);
       Packet p;
       p.packetType = PACKET_CLIP_ALERT;
-      p.data.clipAlert.clipped = 0;
-      // sendToDisplay(&p);
-      digitalWrite(LED_BUILTIN, LOW);
+      p.data.clipAlert.clipped = 1;
+    }
+    else if (clipState == CLIP_ACTIVE)
+    {
+      if ((millis() - clipTimestamp) > CLIP_CLEAR_DELAY_MS)
+      {
+        clipState = NO_CLIP;
+        Packet p;
+        p.packetType = PACKET_CLIP_ALERT;
+        p.data.clipAlert.clipped = 0;
+        // sendToDisplay(&p);
+        digitalWrite(LED_BUILTIN, LOW);
+      }
     }
   }
 
