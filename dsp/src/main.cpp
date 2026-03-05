@@ -24,7 +24,7 @@
 #include <ErriezCRC32.h>
 #include <stdlib.h>
 #include "../../common/filter.h"
-#include "../../common/packets.h"
+#include "../../common/constants.h"
 #include "audio_pipeline/filter_biquad_f.h"
 #include "audio_pipeline/audio_square_wave.h"
 #include "audio_pipeline/audio_gain.h"
@@ -32,6 +32,7 @@
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
+#include "display.h"
 
 //#define TESTMODE 1
 
@@ -95,7 +96,7 @@ ES9039Q2M dac;
 
 // Rotary encoders
 AcceleratedEncoder fcSelector(FC_PIN_A, FC_PIN_B);
-AcceleratedEncoder gainSelector(GAIN_PIN_A, GAIN_PIN_B);
+AcceleratedEncoder gainSelector(GAIN_PIN_A,  GAIN_PIN_B);
 AcceleratedEncoder qSelector(Q_PIN_A, Q_PIN_B);
 AcceleratedEncoder masterGainSelector(INPUT_GAIN_PIN_A, INPUT_GAIN_PIN_B);
 AcceleratedEncoder volumeSelector(VOLUME_PIN_A, VOLUME_PIN_B);
@@ -107,7 +108,7 @@ OneButton displayModeButton(FILTER_MODE_PIN, true);
 
 AudioSquareWave waveform;
 #ifdef TESTMODE
-TestTone testTone(1000, 96000);
+TestTone testTone(1000, 48000);
 #endif
 
 // The filters
@@ -122,6 +123,9 @@ int selectedFilterBand = LOW_BAND;
 int displayMode = DISPLAY_MODE_INDIVIDUAL;
 float masterGain = 0.0f;
 float volume = 0.0f;
+
+uint16_t displayChangeBitmap = 0;
+Display displayUpdater(Wire, filter, filterSettings, selectedFilterBand, displayMode, masterGain, volume, displayChangeBitmap);
 
 // Last time settings were saved to EEPROM
 unsigned long lastSaveTime = 0;
@@ -140,83 +144,6 @@ typedef enum ClipState
 
 ClipState clipState = NO_CLIP;
 uint32_t clipTimestamp = 0;
-
-/**
- * @brief Sends a packet to the display device via I2C communication.
- *
- * This function calculates a CRC32 checksum for the packet (excluding the checksum field),
- * converts it to network byte order, and transmits the packet to the display device
- * at I2C address 0xb1ce.
- *
- * @param packet Pointer to the Packet structure to be sent. The checksum field of the
- *               packet will be updated before transmission.
- *
- * @note The checksum is calculated over the entire packet except the last 4 bytes
- *       (the checksum field itself).
- * @note This function uses the Wire library for I2C communication.
- */
-void sendToDisplay(Packet *packet)
-{
-  packet->checksum = htonl(crc32Buffer((uint8_t *)packet, sizeof(Packet) - 4));
-  AudioNoInterrupts();
-  Wire.beginTransmission(0xb1ce);
-  Wire.send((uint8_t *)packet, sizeof(Packet));
-  Wire.endTransmission();
-  AudioInterrupts();
-}
-
-/**
- * @brief Updates the display with current filter coefficients and parameters.
- *
- * This function sends two packets to the display:
- * 1. A PACKET_COEFFS packet containing the biquad filter coefficients (b0, b1, b2, a1, a2)
- *    for the currently selected filter band, converted to network byte order.
- * 2. A PACKET_PARAMS packet containing the filter parameters (type, frequency, Q, gain)
- *    for the currently selected filter band.
- *
- * @note When VERBOSE is defined, the filter coefficients are printed to the serial port
- *       for debugging purposes.
- * @note All floating-point values are converted to network byte order using htonf()
- *       before transmission.
- *
- * @see sendToDisplay()
- * @see filterLeft.getCoefficients()
- */
-void updateDisplay()
-{
-  // Create packet with coefficients
-  Packet packet = {};
-  packet.packetType = PACKET_COEFFS;
-  packet.selectedFilterBand = selectedFilterBand;
-  packet.displayMode = displayMode;
-  for (int i = 0; i < FILTER_BANDS; i++)
-  {
-    const sample_t *coeffs = filter.getCoefficients(i);
-    packet.data.filters.coeffs[i].b0 = htonf(coeffs[0]);
-    packet.data.filters.coeffs[i].b1 = htonf(coeffs[1]);
-    packet.data.filters.coeffs[i].b2 = htonf(coeffs[2]);
-    packet.data.filters.coeffs[i].a1 = htonf(-coeffs[3]); // Negated due to difference equation form
-    packet.data.filters.coeffs[i].a2 = htonf(-coeffs[4]);
-  }
-  packet.data.filters.masterGain = htonf(masterGain);
-  sendToDisplay(&packet);
-
-  // Send filter parameters to display
-  FilterSettings *settings = &filterSettings[selectedFilterBand];
-  packet = {};
-  packet.packetType = PACKET_PARAMS;
-  packet.selectedFilterBand = selectedFilterBand;
-  packet.displayMode = displayMode;
-  for (int i = 0; i < FILTER_BANDS; i++)
-  {
-    packet.selectedFilterBand = selectedFilterBand;
-    packet.data.params[i].filterType = filterSettings[i].type;
-    packet.data.params[i].frequency = htonf(filterSettings[i].frequency);
-    packet.data.params[i].Q = htonf(filterSettings[i].Q);
-    packet.data.params[i].gain = htonf(filterSettings[i].gain);
-  }
-  sendToDisplay(&packet);
-}
 
 bool checkDAC()
 {
@@ -397,14 +324,22 @@ void setup(void)
   // Set up pushbuttons
   filterTypeSelectButton.attachPress([]()
                                      { filterSettings[selectedFilterBand].type = (filterSettings[selectedFilterBand].type + 1) % NUM_FILTER_TYPES;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_TYPE | Display::DISPLAY_CHANGE_FILTER_COEFFS;
     Serial.printf("Selected filter type: %d\n", filterSettings[selectedFilterBand].type); });
 
   filterSelectButton.attachPress([]()
                                  {  selectedFilterBand = (selectedFilterBand + 1) % FILTER_BANDS;
+  displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_SELECT |
+                         Display::DISPLAY_CHANGE_FILTER_TYPE |
+                         Display::DISPLAY_CHANGE_FILTER_FREQ |
+                         Display::DISPLAY_CHANGE_FILTER_Q |
+                         Display::DISPLAY_CHANGE_FILTER_GAIN |
+                         Display::DISPLAY_CHANGE_FILTER_COEFFS;
   Serial.printf("Selected filter band: %d\n", selectedFilterBand); });
 
   displayModeButton.attachPress([]()
                                 { displayMode = (displayMode + 1) % 2;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_DISPLAY_MODE;
     Serial.printf("Selected display mode: %d\n", displayMode); });
 
   // Initialize S2C
@@ -415,7 +350,6 @@ void setup(void)
   pinMode(A11, INPUT);
   pinMode(A12, INPUT);
   pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH); // Chip select high
 
   // Reset last save time
   lastSaveTime = millis();
@@ -464,7 +398,25 @@ void setup(void)
 
   // Initial display update
   updateAllFilters();
-  updateDisplay();
+  displayChangeBitmap = Display::DISPLAY_CHANGE_ALL;
+  displayUpdater.updateDisplay();
+}
+
+/**
+ * This function is called from the loop and blinks the buiitin LED once a second.
+ */
+void blinkLED()
+{
+  static time_t nextToggle = 0;
+  static bool state = false;
+  time_t currentTime = millis();
+  if (currentTime >= nextToggle)
+  {
+    digitalWrite(LED_BUILTIN, state ? HIGH : LOW);
+    state = !state;
+    Serial.printf("Flipped state to %d\n", state);
+    nextToggle = currentTime + 500; // Toggle every second
+  }
 }
 
 /**
@@ -486,6 +438,8 @@ void setup(void)
  */
 void loop(void)
 {
+  static uint32_t lastSampleRate = 0;
+  static bool lastSampleRateStable = false;
   static time_t nextStatusPrint = 0;
   static time_t lastDACCheck = 0;
   time_t currentTime = millis();
@@ -498,13 +452,28 @@ void loop(void)
       // DAC came back to life, reinitialize it
       Serial.println("DAC came back online. Re-initializing.");
       initDAC();
+      digitalWrite(LED_BUILTIN, LOW); // Turn off clip LED if it was on due to DAC failure
     }
     lastDACCheck = currentTime;
   }
 
+  if(!dacRunning) {
+    blinkLED();
+  }
+
+  // Check if sample rate changed and update display if needed
+  uint32_t currentSampleRate = AudioController::getStandardizedSampleRate();
+  bool currentSampleRateStable = AudioController::isSampleRateStable();
+  if (currentSampleRate != lastSampleRate || currentSampleRateStable != lastSampleRateStable) {
+    lastSampleRate = currentSampleRate;
+    lastSampleRateStable = currentSampleRateStable;
+    displayUpdater.updateSampleRate();
+    Serial.printf("Sample rate changed: %u Hz (stable=%s)\n", currentSampleRate, currentSampleRateStable ? "true" : "false");
+  }
+
   // Print CPU load every 2 seconds
   if (currentTime >= nextStatusPrint)
-  {
+      {
     Serial.println("----- Status -----");
     Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s\n", Timers::GetCpuLoad() * 100.0f, AudioController::getStandardizedSampleRate(), AudioController::isSampleRateStable() ? "true" : "false");
     nextStatusPrint = currentTime + 2000; // Print every 2 seconds
@@ -513,27 +482,21 @@ void loop(void)
     Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x, volume=%f dB\n", dac.readRegister8(0), dac.readRegister16(229), dac.readRegister8(245), dac.getCH1Volume());
   }
 
-  // Update clip indicator
-  if (clipState == CLIP_TRIGGERED)
-  {
-    clipState = CLIP_ACTIVE;
-    clipTimestamp = millis();
-    digitalWrite(LED_BUILTIN, HIGH);
-    Packet p;
-    p.packetType = PACKET_CLIP_ALERT;
-    p.data.clipAlert.clipped = 1;
-    // sendToDisplay(&p);
-  }
-  else if (clipState == CLIP_ACTIVE)
-  {
-    if ((millis() - clipTimestamp) > CLIP_CLEAR_DELAY_MS)
+  // Update clip indicator. Don't bother with this if the DAC is not running.
+  if(dacRunning) {
+    if (clipState == CLIP_TRIGGERED)
     {
-      clipState = NO_CLIP;
-      Packet p;
-      p.packetType = PACKET_CLIP_ALERT;
-      p.data.clipAlert.clipped = 0;
-      // sendToDisplay(&p);
-      digitalWrite(LED_BUILTIN, LOW);
+      clipState = CLIP_ACTIVE;
+      clipTimestamp = millis();
+      digitalWrite(LED_BUILTIN, HIGH);
+    }
+    else if (clipState == CLIP_ACTIVE)
+    {
+      if ((millis() - clipTimestamp) > CLIP_CLEAR_DELAY_MS)
+      {
+        clipState = NO_CLIP;
+        digitalWrite(LED_BUILTIN, LOW);
+      }
     }
   }
 
@@ -556,6 +519,12 @@ void loop(void)
   if (oldSelectedBand != selectedFilterBand)
   {
     settings = &filterSettings[selectedFilterBand];
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_SELECT |
+                 Display::DISPLAY_CHANGE_FILTER_TYPE |
+                 Display::DISPLAY_CHANGE_FILTER_FREQ |
+                 Display::DISPLAY_CHANGE_FILTER_Q |
+                 Display::DISPLAY_CHANGE_FILTER_GAIN |
+                 Display::DISPLAY_CHANGE_FILTER_COEFFS;
     // Update rotary encoders to reflect current settings
     fcSelector.setAcceleratedPosition(map(log10(settings->frequency), LOG_MIN_FREQUENCY, LOG_MAX_FREQUENCY,
                                           LOG_MIN_FREQUENCY / LOG_FREQ_STEP, LOG_MAX_FREQUENCY / LOG_FREQ_STEP));
@@ -600,19 +569,52 @@ void loop(void)
     return;
   }
   Serial.printf("Frequency: %f Hz, Master gain: %f dB, Volume: %f dB\n", newFrequency, newMasterGain, newVolume);
-  settings->frequency = newFrequency;
-  settings->gain = newGain;
-  settings->Q = newQ;
-  masterGain = newMasterGain;
+  bool filterNeedsUpdate = false;
+  if (oldFilterType != settings->type)
+  {
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_TYPE | Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (newFrequency != settings->frequency)
+  {
+    settings->frequency = newFrequency;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_FREQ | Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (newGain != settings->gain)
+  {
+    settings->gain = newGain;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_GAIN | Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (newQ != settings->Q)
+  {
+    settings->Q = newQ;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_Q | Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (oldDisplayMode != displayMode)
+  {
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_DISPLAY_MODE;
+  }
+  if (newMasterGain != oldMasterGain)
+  {
+    masterGain = newMasterGain;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_IN_GAIN;
+  }
   if(volume != newVolume) {
     volume = newVolume;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_OUT_GAIN;
     Serial.printf("Setting volume to %f dB\n", volume);
     dac.setVolumeDB(volume);
   }
   gain.setGain(powf(10.0f, masterGain / 20.0f)); // Convert dB to linear
 
   // Set up filter according to type
-  updateFilter(selectedFilterBand);
-  updateDisplay();
+  if (filterNeedsUpdate)
+  {
+    updateFilter(selectedFilterBand);
+  }
+  displayUpdater.updateDisplay();
   saveNeeded = true;
 }

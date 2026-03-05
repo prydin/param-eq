@@ -33,10 +33,15 @@ public:
         return audioInputI2S ? audioInputI2S->isSampleRateStable() : false;
     }
 
+    void enable(bool en) {
+        enabled = en;
+    }
+
 private:
     AudioController();
     int32_t outputs[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES];
     void (*clipDetector)(bool clipped) = nullptr;
+    bool enabled = true;
     static uint32_t sampleRate;
 };
 

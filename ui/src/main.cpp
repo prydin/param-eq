@@ -1,18 +1,20 @@
- #include <SPI.h>
+#include <SPI.h>
 #include <TFT_eSPI.h>
 #include <TFT_eWidget.h>
 #include <esp_mac.h>
 
 // Install the "XPT2046_Touchscreen" library by Paul Stoffregen to use the Touchscreen - https://github.com/PaulStoffregen/XPT2046_Touchscreen
 // Note: this library doesn't require further configuration
+#define ST7796_DRIVER
 #include <XPT2046_Touchscreen.h>
 
 #include <complex.h>
 #include <Wire.h>
 
-#include "comms.h"
 #include "netconv.h"
+#include "registers.h"
 #include "../../common/filter.h"
+#include "../../common/constants.h"
 
 // Touchscreen pins
 #define XPT2046_IRQ 36  // T_IRQ
@@ -78,6 +80,8 @@ uint16_t lightMode[NUM_COLORS] = {
 
 uint16_t *colors = darkMode;
 
+RegisterBank registers;
+
 void initGraph()
 {
   // Graph area is 280 pixels wide, 150 high, dark grey background
@@ -110,10 +114,11 @@ void initGraph()
   // Drav information box to the right of the graph
   tft.setTextDatum(TL_DATUM); // Top left text datum
   tft.drawRect(280, 28, 40, 142, colors[COL_FOREGROUND]);
-  tft.drawString("Fs", 285, 35);
-  tft.drawString("MGain", 285, 65);
-  tft.drawString("FGain", 285, 95);
-  tft.drawString("Q", 285, 125);
+  tft.drawString("Fs", 285, 32);
+  tft.drawString("MGain", 285, 61);
+  tft.drawString("FGain", 285, 89); 
+  tft.drawString("Q", 285, 117);
+  tft.drawString("Vol", 285, 145);
 }
 
 void updateUserSettings(int filterType, int filterIndex, int displayMode)
@@ -201,7 +206,7 @@ void updateGraph(float *x, float *y, int length, uint16_t color, bool clearPrevi
   }
 }
 
-float getBiquadGain(float f, float fs, float b0, float b1, float b2, float a1, float a2)
+inline float getBiquadGain(float f, float fs, float b0, float b1, float b2, float a1, float a2)
 {
   float w = 2.0 * M_PI * f / fs;
   std::complex<float> jw(0, w);
@@ -210,7 +215,7 @@ float getBiquadGain(float f, float fs, float b0, float b1, float b2, float a1, f
   return log10(std::abs(numerator / denominator)) * 20.0f;
 }
 
-void updateFilterCoeffs(Packet *packet)
+void updateFilterCoeffs(RegisterBank *registers)
 {
   const int dataLength = 100;
   float freqResponse[dataLength];
@@ -218,22 +223,23 @@ void updateFilterCoeffs(Packet *packet)
 
   float logStep = (log10(MAX_GRAPH_FREQUENCY) - log10(MIN_GRAPH_FREQUENCY)) / float(dataLength - 1);
   float logMinFreq = log10(MIN_GRAPH_FREQUENCY);
+  int index = registers->getFilterSelect();
+  float b0 = registers->getFilterCoeff(index, 0);
+  float b1 = registers->getFilterCoeff(index, 1);
+  float b2 = registers->getFilterCoeff(index, 2);
+  float a1 = registers->getFilterCoeff(index, 3);
+  float a2 = registers->getFilterCoeff(index, 4);
+  // Print coefficients
+  //Serial.printf("Filter %d Coefficients in updateFilterCoeffs: %f, %f, %f, %f, %f\n", index, b0, b1, b2, a1, a2);
+
   for (int i = 0; i < dataLength; i++)
   {
     freq[i] = exp10(i * logStep + logMinFreq);
-
-    // Initialize frequency response
-    int index = packet->selectedFilterBand;
-    float b0 = ntohf(packet->data.filters.coeffs[index].b0);
-    float b1 = ntohf(packet->data.filters.coeffs[index].b1);
-    float b2 = ntohf(packet->data.filters.coeffs[index].b2);
-    float a1 = ntohf(packet->data.filters.coeffs[index].a1);
-    float a2 = ntohf(packet->data.filters.coeffs[index].a2);
     freqResponse[i] = getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
   }
   updateGraph(freq, freqResponse, dataLength, TFT_CYAN, true);
 
-  if (packet->displayMode == DISPLAY_MODE_COMBINED)
+  if (registers->getDisplayMode() == DISPLAY_MODE_COMBINED)
   {
     for (int i = 0; i < dataLength; i++)
     {
@@ -242,17 +248,16 @@ void updateFilterCoeffs(Packet *packet)
       freqResponse[i] = 0.0f;
       for (int j = 0; j < FILTER_BANDS; j++)
       {
-        float b0 = ntohf(packet->data.filters.coeffs[j].b0);
-        float b1 = ntohf(packet->data.filters.coeffs[j].b1);
-        float b2 = ntohf(packet->data.filters.coeffs[j].b2);
-        float a1 = ntohf(packet->data.filters.coeffs[j].a1);
-        float a2 = ntohf(packet->data.filters.coeffs[j].a2);
+        float b0 = registers->getFilterCoeff(j, 0);
+        float b1 = registers->getFilterCoeff(j, 1);
+        float b2 = registers->getFilterCoeff(j, 2);
+        float a1 = registers->getFilterCoeff(j, 3);
+        float a2 = registers->getFilterCoeff(j, 4);
         freqResponse[i] += getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2);
-        // Serial.printf("Freq: %.2f Hz, Band %d Gain: %.2f dB\n", freq[i], j, getBiquadGain(freq[i], SAMPLE_FREQ, b0, b1, b2, a1, a2));
       }
     }
     // Add master gain
-    float masterGain = ntohf(packet->data.filters.masterGain);
+    float masterGain = registers->getInputGain();
     for (int i = 0; i < dataLength; i++)
     {
       freqResponse[i] += masterGain;
@@ -261,14 +266,14 @@ void updateFilterCoeffs(Packet *packet)
   }
 }
 
-void updateFilterParameters(Packet *packet, float masterGain)
+void updateFilterParameters(RegisterBank *registers)
 {
   // Extract set gain, Q and frequency
-  int index = packet->selectedFilterBand;
-  int filterType = int(packet->data.params[index].filterType);
-  float gain = ntohf(packet->data.params[index].gain);
-  float Q = ntohf(packet->data.params[index].Q);
-  float frequency = ntohf(packet->data.params[index].frequency);
+  int index = registers->getFilterSelect();
+  int filterType = int(registers->getFilterType());
+  float gain = registers->getFilterGain();
+  float Q = registers->getQ();
+  float frequency = registers->getFrequency();
   tft.setTextColor(TFT_WHITE, TFT_BLACK); // White text with black background
   tft.setTextSize(1);
   /*  tft.setCursor(10, 180);
@@ -285,27 +290,62 @@ void updateFilterParameters(Packet *packet, float masterGain)
   tft.printf("%.0f", frequency);
 
   tft.setTextDatum(TL_DATUM);
-  tft.setCursor(285, 48);
-  tft.printf("%5.1f", 44.1);
-  tft.setCursor(285, 78);
-  tft.printf("%5.1f", masterGain);
-  tft.setCursor(285, 108);
+  tft.setCursor(285, 42);
+  Serial.printf("Sample Rate in updateFilterParameters: %d\n", registers->getSampleRate());
+  if(registers->getSampleRate() == 0) {
+    tft.print(" ----");
+  } else {
+    tft.printf("%5.1f", registers->getSampleRate() / 1000.0f);
+  }
+  tft.setCursor(285, 74);
+  tft.printf("%5.1f", registers->getInputGain());
+  tft.setCursor(285, 102);
   tft.printf("%5.1f", gain);
-  tft.setCursor(285, 138);
+  tft.setCursor(285, 130);
   tft.printf("%5.1f", Q);
+  tft.setCursor(285, 158);
+  if(registers->getOutputGain() <= -100.0f) {
+    tft.printf("%5.0f", registers->getOutputGain());
+  } else {
+    tft.printf("%5.1f", registers->getOutputGain());
+  }
 
-  updateUserSettings(filterType, int(index), packet->displayMode);
+  updateUserSettings(filterType, int(index), registers->getDisplayMode());
+}
+
+void processI2C(int numBytes)
+{
+  // Serial.printf("I2C data received: %d bytes\n", numBytes);
+  if (numBytes > 5)
+  {
+    Serial.printf("I2C buffer overflow: %d bytes received\n", numBytes);
+    return;
+  }
+  // Read register number
+  uint8_t registerNumber = Wire.read();
+
+  // Read the data
+  uint32_t data;
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
+  size_t bytesRead = 0;
+  while (Wire.available() && bytesRead < numBytes)
+  {
+    ptr[bytesRead++] = Wire.read();
+    // Serial.printf("Read byte: %02x\n", ptr[bytesRead - 1]);
+  }
+  registers.updateRegister(registerNumber, data);
 }
 
 void setup()
 {
   Serial.begin(115200);
+  Serial.println("Starting UI...");
   tft.init();
   tft.setRotation(3);
 
 #ifdef ST7796_DRIVER
   // Deal with cheap ST7796 displays that have incorrect MADCTL settings
-  //tft.setRotation(3);
+  // tft.setRotation(3);
   tft.begin_nin_write();
   tft.writecommand(ST7796_MADCTL);
   tft.writedata(ST7796_MADCTL_MV | ST7796_MADCTL_MX | ST7796_MADCTL_MH | ST7796_MADCTL_BGR);
@@ -323,13 +363,19 @@ void setup()
   // Initialize communication with the DSP
   Wire.setPins(32, 25);
   Wire.setBufferSize(1024);
-  Wire.onReceive(processIncomingPacket);
-  Wire.begin(0xb1ce);
+  Wire.onReceive(processI2C);
+  Wire.begin(DISPLAY_I2C_ADDRESS);
 }
 
 void loop()
 {
   static float masterGain = 0.0f;
+  if (registers.isReady())
+  {
+    updateFilterCoeffs(&registers);
+    updateFilterParameters(&registers);
+  }
+  /*
   Packet *packet = popPacket();
   if (packet == NULL)
   {
@@ -354,5 +400,5 @@ void loop()
   default:
     Serial.println("Unknown packet type received");
     return;
-  }
+  } */
 }
