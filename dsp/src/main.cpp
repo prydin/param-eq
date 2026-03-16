@@ -439,8 +439,8 @@ void setup(void)
 
   // Initial display update
   updateAllFilters();
-  displayChangeBitmap = Display::DISPLAY_CHANGE_ALL;
   delay(1000); // Wait for display to be fully initialized
+  displayChangeBitmap = Display::DISPLAY_CHANGE_ALL;
   displayUpdater.updateDisplay();
 }
 
@@ -685,17 +685,17 @@ void saveSettingsIfNeeded(time_t currentTime)
   saveNeeded = false;
 }
 
-bool controlsUnchanged(const ControlSnapshot &snapshot, const ControlValues &values)
+bool controlsChanged(const ControlSnapshot &snapshot, const ControlValues &values)
 {
   FilterSettings *settings = &filterSettings[selectedFilterBand];
-  return values.frequency == settings->frequency &&
+  return !(values.frequency == settings->frequency &&
          snapshot.filterType == settings->type &&
          values.gain == settings->gain &&
          values.q == settings->Q &&
          snapshot.selectedBand == selectedFilterBand &&
          snapshot.displayMode == displayMode &&
          values.masterGain == snapshot.masterGain &&
-         values.volume == volume;
+         values.volume == volume);
 }
 
 void applyControlChanges(const ControlSnapshot &snapshot, const ControlValues &values)
