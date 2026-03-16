@@ -28,15 +28,17 @@
 #include "input_i2s.h"
 #include "output_i2s.h"
 
+#define REQUIRED_STABLE_INTERVALS 10
+
 // set up two flip-flopped buffers, one is used for queueing up data for processing, the other receives data from I2S codec
 static int32_t dataL[AUDIO_BLOCK_SAMPLES*2] = {0};
 static int32_t dataR[AUDIO_BLOCK_SAMPLES*2] = {0};
 static int32_t* bufferL[2] = { &dataL[0], &dataL[AUDIO_BLOCK_SAMPLES] };
 static int32_t* bufferR[2] = { &dataR[0], &dataR[AUDIO_BLOCK_SAMPLES] };
 int iter = 0;
-uint32_t AudioInputI2S::interruptIntervalMicros = 1; // initialized to 1 to avoid division by zero on first read
-uint32_t AudioInputI2S::numStableIntervals = 0;
-uint32_t AudioInputI2S::lastTimeStamp = 0;
+volatile uint32_t AudioInputI2S::interruptIntervalMicros = 1; // initialized to 1 to avoid division by zero on first read
+volatile uint32_t AudioInputI2S::numStableIntervals = 0;
+volatile uint32_t AudioInputI2S::lastTimeStamp = 0;
 
 // Common sample rates for rounding to the neastest standard rate
 uint32_t standardSampleRates[] {
@@ -90,8 +92,11 @@ void AudioInputI2S::isr(void)
  	interruptIntervalMicros = currentTime - lastTimeStamp;
 	lastTimeStamp = currentTime;
 	if( abs((int32_t)interruptIntervalMicros - (int32_t)prev) < 100 ) {
-		numStableIntervals++;
+		if(numStableIntervals < REQUIRED_STABLE_INTERVALS) {
+			numStableIntervals++;
+		}
 	} else {
+		Serial.printf("Sample rate changed: %u us interval\n", interruptIntervalMicros);
 		numStableIntervals = 0;
 	}
 	
@@ -165,8 +170,10 @@ uint32_t AudioInputI2Sslave::getSampleRate(void)
 bool AudioInputI2Sslave::isSampleRateStable(void) 
 {
 	// Consider sample rate stable if the interrupt interval has been stable for more than 10 intervals and 
-	// the last interval is within 100ms of the current time
-	return interruptIntervalMicros > 2 && numStableIntervals > 10 && micros() - lastTimeStamp < 100000;
+	// the last interval is within 1s of the current time
+	u_int32_t currentTime = micros();
+	int32_t t = currentTime > lastTimeStamp ? currentTime - lastTimeStamp : 0;
+	return numStableIntervals >= REQUIRED_STABLE_INTERVALS && t < 100000;
  }
 
  uint32_t AudioInputI2Sslave::getStandardizedSampleRate(void)

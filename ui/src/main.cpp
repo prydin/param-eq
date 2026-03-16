@@ -104,9 +104,9 @@ void initGraph()
   tft.drawNumber(20000, gr.getPointX(log10(20000)) + 43, gr.getPointY(-15.0) + 13);
   // Draw the y axis scale
   tft.setTextDatum(MR_DATUM); // Middle right text datum
-  tft.drawNumber(-15, gr.getPointX(0.0) + 32, gr.getPointY(-15.0) + 13);
-  tft.drawNumber(0, gr.getPointX(0.0) + 32, gr.getPointY(0.0) + 13);
-  tft.drawNumber(15, gr.getPointX(0.0) + 32, gr.getPointY(15.0) + 13);
+  tft.drawNumber(-15, gr.getPointX(0.0) + 52, gr.getPointY(-15.0) + 13);
+  tft.drawNumber(0, gr.getPointX(0.0) + 52, gr.getPointY(0.0) + 13);
+  tft.drawNumber(15, gr.getPointX(0.0) + 52, gr.getPointY(15.0) + 13);
 
   // Draw empty graph, top left corner at 40,10 on TFT
   gr.drawGraph(40, 10);

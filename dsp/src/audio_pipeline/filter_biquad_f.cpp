@@ -1,3 +1,23 @@
+// Copyright (c) 2026 Pontus Rydin
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 #include <Arduino.h>
 #include "filter_biquad_f.h"
 #include "base.h"
@@ -85,10 +105,10 @@ void AudioFilterBiquadFloat::setSosCoefficients(uint32_t stages, const sample_t 
     __enable_irq();
 }
 
-void AudioFilterBiquadFloat::setLowpass(uint32_t stage, double frequency, double q)
+void AudioFilterBiquadFloat::setLowpass(uint32_t stage, double frequency, double sampleRate, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
-    double w0 = frequency * (TWO_PI / AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double alpha = sinW0 / ((double)q * 2.0);
     double cosW0 = cos(w0);
@@ -101,10 +121,10 @@ void AudioFilterBiquadFloat::setLowpass(uint32_t stage, double frequency, double
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setHighpass(uint32_t stage, double frequency, double q)
+void AudioFilterBiquadFloat::setHighpass(uint32_t stage, double frequency, double sampleRate, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
-    double w0 = frequency * (TWO_PI / AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double alpha = sinW0 / ((double)q * 2.0);
     double cosW0 = cos(w0);
@@ -117,10 +137,10 @@ void AudioFilterBiquadFloat::setHighpass(uint32_t stage, double frequency, doubl
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setBandpass(uint32_t stage, double frequency, double q)
+void AudioFilterBiquadFloat::setBandpass(uint32_t stage, double frequency, double sampleRate, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
-    double w0 = frequency * (TWO_PI / AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double alpha = sinW0 / ((double)q * 2.0);
     double cosW0 = cos(w0);
@@ -133,10 +153,10 @@ void AudioFilterBiquadFloat::setBandpass(uint32_t stage, double frequency, doubl
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setNotch(uint32_t stage, double frequency, double q)
+void AudioFilterBiquadFloat::setNotch(uint32_t stage, double frequency, double sampleRate, double q)
 {
     sample_t c[STAGE_COEFFICIENTS];
-    double w0 = frequency * (TWO_PI / (double)AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double alpha = sinW0 / ((double)q * 2.0);
     double cosW0 = cos(w0);
@@ -149,11 +169,11 @@ void AudioFilterBiquadFloat::setNotch(uint32_t stage, double frequency, double q
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setLowShelf(uint32_t stage, double frequency, double gain, double slope)
+void AudioFilterBiquadFloat::setLowShelf(uint32_t stage, double frequency, double sampleRate, double gain, double slope)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double a = pow(10.0, gain / 40.0);
-    double w0 = frequency * (TWO_PI / (double)AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double cosW0 = cos(w0);
     double ss = (a * a + 1.0) * (1.0 / slope - 1.0) + 2.0 * a;
@@ -175,11 +195,11 @@ void AudioFilterBiquadFloat::setLowShelf(uint32_t stage, double frequency, doubl
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setHighShelf(uint32_t stage, double frequency, double gain, double slope)
+void AudioFilterBiquadFloat::setHighShelf(uint32_t stage, double frequency, double sampleRate, double gain, double slope)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double a = pow(10.0, gain / 40.0);
-    double w0 = frequency * (TWO_PI / (double)AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double cosW0 = cos(w0);
     double ss = (a * a + 1.0) * (1.0 / (double)slope - 1.0) + 2.0 * a;
@@ -200,11 +220,11 @@ void AudioFilterBiquadFloat::setHighShelf(uint32_t stage, double frequency, doub
     setCoefficients(stage, c);
 }
 
-void AudioFilterBiquadFloat::setPeakingEQ(uint32_t stage, double frequency, double q, double gain)
+void AudioFilterBiquadFloat::setPeakingEQ(uint32_t stage, double frequency, double sampleRate, double q, double gain)
 {
     sample_t c[STAGE_COEFFICIENTS];
     double a = pow(10.0, gain / 40.0);
-    double w0 = frequency * (2.0 * 3.141592654 / (double)AudioController::getSampleRate());
+    double w0 = frequency * (TWO_PI / sampleRate);
     double sinW0 = sin(w0);
     double alpha = sinW0 / (q * 2.0f);
     double cosW0 = cos(w0);

@@ -1,8 +1,29 @@
+// Copyright (c) 2026 Pontus Rydin
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 /**
  * @file main.cpp
  * @brief Teensy-based parametric equalizer with rotary encoder controls and I2S audio output.
  *
- * This file implements a real-time audio parametric equalizer system using the Teensy Audio Library.
+ * This file implements a real-time audio parametric equalizer system using the
+ * Teensy Audio Library.
  * It provides three-band equalization (low, mid, high) with selectable filter types (low shelf,
  * high shelf, peaking EQ). User controls include rotary encoders for frequency, gain, and Q
  * adjustment, along with pushbuttons for filter band and type selection.
@@ -29,21 +50,18 @@
 #include "audio_pipeline/audio_square_wave.h"
 #include "audio_pipeline/audio_gain.h"
 #include "audio_pipeline/audio_rms.h"
+#include "audio_pipeline/audio_controller.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
-#include "display.h"
+#include "display.h" 
 
 //#define TESTMODE 1
 
 #ifdef TESTMODE
 #include "audio_pipeline/test_tone.h"
-#endif
+#endif 
 #include <ES9039Q2M.h>
-
-// Audio interrupt control macros
-#define AudioNoInterrupts() (NVIC_DISABLE_IRQ(IRQ_SOFTWARE))
-#define AudioInterrupts() (NVIC_ENABLE_IRQ(IRQ_SOFTWARE))
 
 // Filter control endpoints and steps
 #define MIN_GAIN_DB -15.0f
@@ -64,6 +82,13 @@
 #define VOLUME_STEP_DB 1.0f
 #define VOLUME_MIN -127.0f
 #define VOLUME_MAX 0.0f
+
+// Frequency conversion macros
+#define FREQ_TO_INDEX(freq) (map(log10(freq), \
+        LOG_MIN_FREQUENCY, \
+        LOG_MAX_FREQUENCY, \
+        LOG_MIN_FREQUENCY / LOG_FREQ_STEP, \
+        LOG_MAX_FREQUENCY / LOG_FREQ_STEP))
 
 // Rotary encoder pins
 #define FC_PIN_A 33
@@ -96,7 +121,7 @@ ES9039Q2M dac;
 
 // Rotary encoders
 AcceleratedEncoder fcSelector(FC_PIN_A, FC_PIN_B);
-AcceleratedEncoder gainSelector(GAIN_PIN_A,  GAIN_PIN_B);
+AcceleratedEncoder gainSelector(GAIN_PIN_A, GAIN_PIN_B);
 AcceleratedEncoder qSelector(Q_PIN_A, Q_PIN_B);
 AcceleratedEncoder masterGainSelector(INPUT_GAIN_PIN_A, INPUT_GAIN_PIN_B);
 AcceleratedEncoder volumeSelector(VOLUME_PIN_A, VOLUME_PIN_B);
@@ -125,7 +150,15 @@ float masterGain = 0.0f;
 float volume = 0.0f;
 
 uint16_t displayChangeBitmap = 0;
-Display displayUpdater(Wire, filter, filterSettings, selectedFilterBand, displayMode, masterGain, volume, displayChangeBitmap);
+Display displayUpdater(Wire,
+                       filter,
+                       filterSettings,
+                       selectedFilterBand,
+                       displayMode,
+                       masterGain,
+                       volume,
+                       displayChangeBitmap);
+
 
 // Last time settings were saved to EEPROM
 unsigned long lastSaveTime = 0;
@@ -164,15 +197,18 @@ bool checkDAC()
 void initDAC()
 {
   // Reset the DAC
-  for(int i = 0; i < DAC_INIT_RETRIES; i++) {
+  for (int i = 0; i < DAC_INIT_RETRIES; i++)
+  {
     dac.writeRegister8(0x00, 0x82);
     delay(DAC_INIT_DELAY_MS);
-    if(checkDAC() != 0) {
+    if (checkDAC() != 0)
+    {
       dacRunning = true;
       break; // Exit loop if DAC responds
     }
   }
-  if(!dacRunning) {
+  if (!dacRunning)
+  {
     Serial.println("Failed to initialize DAC after multiple attempts.");
     return;
   }
@@ -185,7 +221,6 @@ void initDAC()
   dac.writeRegister8(0x7B, 0x00);
   dac.setVolumeDB(volume);
 }
-
 
 /**
  * @brief Updates the filter coefficients for the selected filter band.
@@ -206,13 +241,13 @@ void updateFilter(int selected)
   switch (settings->type)
   {
   case LOWSHELF:
-    filter.setLowShelf(selected, settings->frequency, settings->gain, settings->Q);
+    filter.setLowShelf(selected, settings->frequency, AudioController::getSampleRate(), settings->gain, settings->Q);
     break;
   case HIGHSHELF:
-    filter.setHighShelf(selected, settings->frequency, settings->gain, settings->Q);
+    filter.setHighShelf(selected, settings->frequency, AudioController::getSampleRate(), settings->gain, settings->Q);
     break;
   case PEAKINGEQ:
-    filter.setPeakingEQ(selected, settings->frequency, settings->Q, settings->gain);
+    filter.setPeakingEQ(selected, settings->frequency, AudioController::getSampleRate(), settings->Q, settings->gain);
     break;
   case BYPASS:
     filter.bypass(selected);
@@ -273,12 +308,12 @@ void setup(void)
   filter.addReceiver(AudioController::getInstance());
   gain.setGain(1.0f); // Initial gain to avoid clipping
 
-  #ifdef TESTMODE
+#ifdef TESTMODE
   testTone.addReceiver(&gain);
   AudioController::getInstance()->addReceiver(&testTone);
-  #else
+#else
   AudioController::getInstance()->addReceiver(&gain);
-  #endif
+#endif
   AudioController::getInstance()->setClipDetector(clipDetected);
 
   // Make sure pins 5 and 6 are in input mode (due to a PCB design issue)
@@ -289,15 +324,16 @@ void setup(void)
   dac.begin();
   delay(500); // Wait for DAC to stabilize
   initDAC();
-  
-  // need to wait a bit before configuring codec, otherwise something weird happens and there's no output...
+
+  // need to wait a bit before configuring codec,
+  // otherwise something weird happens and there's no output...
   delay(100);
 
 #ifdef TESTMODE
   InitI2s(false);
   AudioController::getInstance()->setSampleRate(96000);
 
-  //testTone.begin();
+  // testTone.begin();
 #else
   InitI2s(true);
 #endif
@@ -322,25 +358,26 @@ void setup(void)
   pinMode(LED_BUILTIN, OUTPUT);
 
   // Set up pushbuttons
-  filterTypeSelectButton.attachPress([]()
-                                     { filterSettings[selectedFilterBand].type = (filterSettings[selectedFilterBand].type + 1) % NUM_FILTER_TYPES;
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_TYPE | Display::DISPLAY_CHANGE_FILTER_COEFFS;
-    Serial.printf("Selected filter type: %d\n", filterSettings[selectedFilterBand].type); });
+  filterTypeSelectButton.attachPress([]() {
+    filterSettings[selectedFilterBand].type =
+        (filterSettings[selectedFilterBand].type + 1) % NUM_FILTER_TYPES;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_TYPE |
+                           Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    Serial.printf("Selected filter type: %d\n",
+                  filterSettings[selectedFilterBand].type);
+  });
 
-  filterSelectButton.attachPress([]()
-                                 {  selectedFilterBand = (selectedFilterBand + 1) % FILTER_BANDS;
-  displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_SELECT |
-                         Display::DISPLAY_CHANGE_FILTER_TYPE |
-                         Display::DISPLAY_CHANGE_FILTER_FREQ |
-                         Display::DISPLAY_CHANGE_FILTER_Q |
-                         Display::DISPLAY_CHANGE_FILTER_GAIN |
-                         Display::DISPLAY_CHANGE_FILTER_COEFFS;
-  Serial.printf("Selected filter band: %d\n", selectedFilterBand); });
+  filterSelectButton.attachPress([]() {
+    selectedFilterBand = (selectedFilterBand + 1) % FILTER_BANDS;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_ALL;
+    Serial.printf("Selected filter band: %d\n", selectedFilterBand);
+  });
 
-  displayModeButton.attachPress([]()
-                                { displayMode = (displayMode + 1) % 2;
+  displayModeButton.attachPress([]() {
+    displayMode = (displayMode + 1) % 2;
     displayChangeBitmap |= Display::DISPLAY_CHANGE_DISPLAY_MODE;
-    Serial.printf("Selected display mode: %d\n", displayMode); });
+    Serial.printf("Selected display mode: %d\n", displayMode);
+  });
 
   // Initialize S2C
   Wire.begin();
@@ -381,24 +418,29 @@ void setup(void)
     }
   }
 
-  // Set initial positions
+  // Set initial positions — setEndpoints MUST come before setAcceleratedPosition so
+  // the clamping inside setAcceleratedPosition uses the correct range.
   FilterSettings *settings = &filterSettings[selectedFilterBand];
-  selectedFilterBand = 0;
-  fcSelector.setAcceleratedPosition(log10(settings->frequency) / LOG_FREQ_STEP);
-  fcSelector.setEndpoints(log10(MIN_FREQUENCY) / LOG_FREQ_STEP, log10(MAX_FREQUENCY) / LOG_FREQ_STEP);
-  gainSelector.setAcceleratedPosition(settings->gain / GAIN_STEP_DB);
+  Serial.printf("Selected filter: %d, Initial frequency: %f Hz, Q: %f, Gain: %f dB, Index: %d\n",
+                selectedFilterBand, settings->frequency, settings->Q, settings->gain, FREQ_TO_INDEX(settings->frequency));
+  fcSelector.setEndpoints(log10(MIN_FREQUENCY) / LOG_FREQ_STEP,
+                          log10(MAX_FREQUENCY) / LOG_FREQ_STEP);
+  fcSelector.setAcceleratedPosition(FREQ_TO_INDEX(settings->frequency));
   gainSelector.setEndpoints(MIN_GAIN_DB / GAIN_STEP_DB, MAX_GAIN_DB / GAIN_STEP_DB);
-  qSelector.setAcceleratedPosition(settings->Q / Q_STEP);
+  gainSelector.setAcceleratedPosition(settings->gain / GAIN_STEP_DB);
   qSelector.setEndpoints(MIN_Q / Q_STEP, MAX_Q / Q_STEP);
-  masterGainSelector.setAcceleratedPosition(0);
-  masterGainSelector.setEndpoints(MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB, MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB); // -20 dB to 20 dB
-  masterGainSelector.setAcceleratedPosition(0);                                                                  // 0 dB
+  qSelector.setAcceleratedPosition(settings->Q / Q_STEP);
+  masterGainSelector.setEndpoints(
+      MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB,
+      MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB); // -20 dB to 20 dB
+  masterGainSelector.setAcceleratedPosition(0); // 0 dB
   volumeSelector.setEndpoints(VOLUME_MIN / VOLUME_STEP_DB, VOLUME_MAX / VOLUME_STEP_DB);
   volumeSelector.setAcceleratedPosition(0); // 0 dB
 
   // Initial display update
   updateAllFilters();
   displayChangeBitmap = Display::DISPLAY_CHANGE_ALL;
+  delay(1000); // Wait for display to be fully initialized
   displayUpdater.updateDisplay();
 }
 
@@ -413,9 +455,308 @@ void blinkLED()
   if (currentTime >= nextToggle)
   {
     digitalWrite(LED_BUILTIN, state ? HIGH : LOW);
-    state = !state;
     Serial.printf("Flipped state to %d\n", state);
     nextToggle = currentTime + 500; // Toggle every second
+  }
+}
+
+uint32_t getCurrentSampleRate(bool *isChanged = nullptr)
+{
+  static uint32_t lastRate = 44100; // Default to 44.1 kHz until we get a reading from AudioController
+  uint32_t newRate = AudioController::getStandardizedSampleRate();
+  if (isChanged)
+  {
+    *isChanged = (newRate != lastRate);
+  }
+  if(AudioController::isSampleRateStable()) {
+    lastRate = newRate;
+  }
+  return newRate;
+}
+
+namespace
+{
+struct ControlSnapshot
+{
+  int filterType;
+  int selectedBand;
+  int displayMode;
+  float masterGain;
+};
+
+struct ControlValues
+{
+  float frequency;
+  float q;
+  float gain;
+  float masterGain;
+  float volume;
+};
+}
+
+void checkDACConnection(time_t currentTime, time_t &lastDACCheck)
+{
+  if (currentTime - lastDACCheck <= DAC_CHECK_PERIOD)
+  {
+    return;
+  }
+
+  if (!checkDAC())
+  {
+    dacRunning = false;
+    Serial.println("Lost contact with DAC!.");
+  }
+  else if (!dacRunning)
+  {
+    Serial.println("DAC came back online. Re-initializing.");
+    initDAC();
+    digitalWrite(LED_BUILTIN, LOW);
+  }
+
+  lastDACCheck = currentTime;
+}
+
+void updateSampleRateStatus(uint32_t &lastSampleRate, bool &lastSampleRateStable)
+{
+  uint32_t currentSampleRate = AudioController::getStandardizedSampleRate();
+  bool currentSampleRateStable = AudioController::isSampleRateStable();
+  if (currentSampleRate == lastSampleRate &&
+      currentSampleRateStable == lastSampleRateStable)
+  {
+    return;
+  }
+
+  // Update all filters with new sample rate
+  updateAllFilters();
+
+  lastSampleRate = currentSampleRate;
+  lastSampleRateStable = currentSampleRateStable;
+  displayUpdater.updateSampleRate();
+  Serial.printf("Sample rate changed: %u Hz (stable=%s)\n",
+                currentSampleRate,
+                currentSampleRateStable ? "true" : "false");
+}
+
+void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
+{
+  if (currentTime < nextStatusPrint)
+  {
+    return;
+  }
+
+  Serial.println("----- Status -----");
+  Serial.printf(
+    "CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s, stable intervals: %u\n",
+    Timers::GetCpuLoad() * 100.0f,
+    AudioController::getStandardizedSampleRate(),
+    AudioController::isSampleRateStable() ? "true" : "false",
+    AudioController::getNumStableIntervals());
+  nextStatusPrint = currentTime + 2000;
+  Serial.printf("RMS Level: %f, / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
+  Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
+  Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x, volume=%f dB\n",
+                dac.readRegister8(0),
+                dac.readRegister16(229),
+                dac.readRegister8(245),
+                dac.getCH1Volume());
+}
+
+void updateClipIndicator()
+{
+  if (!dacRunning)
+  {
+    return;
+  }
+
+  if (clipState == CLIP_TRIGGERED)
+  {
+    clipState = CLIP_ACTIVE;
+    clipTimestamp = millis();
+    digitalWrite(LED_BUILTIN, HIGH);
+  }
+  else if (clipState == CLIP_ACTIVE && (millis() - clipTimestamp) > CLIP_CLEAR_DELAY_MS)
+  {
+    clipState = NO_CLIP;
+    digitalWrite(LED_BUILTIN, LOW);
+  }
+}
+
+ControlSnapshot captureControlSnapshot()
+{
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
+  return {
+    settings->type,
+    selectedFilterBand,
+    displayMode,
+    masterGain,
+  };
+}
+
+void tickControls()
+{
+  fcSelector.tick();
+  gainSelector.tick();
+  qSelector.tick();
+  filterTypeSelectButton.tick();
+  filterSelectButton.tick();
+  displayModeButton.tick();
+  masterGainSelector.tick();
+  volumeSelector.tick();
+}
+
+void syncEncodersForSelectedBandIfNeeded(int previousSelectedBand)
+{
+  if (previousSelectedBand == selectedFilterBand)
+  {
+    return;
+  }
+
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
+  displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_SELECT |
+                         Display::DISPLAY_CHANGE_FILTER_TYPE |
+                         Display::DISPLAY_CHANGE_FILTER_FREQ |
+                         Display::DISPLAY_CHANGE_FILTER_Q |
+                         Display::DISPLAY_CHANGE_FILTER_GAIN |
+                         Display::DISPLAY_CHANGE_FILTER_COEFFS;
+
+  fcSelector.setAcceleratedPosition(FREQ_TO_INDEX(settings->frequency));
+  gainSelector.setAcceleratedPosition(map(settings->gain,
+                                          MIN_GAIN_DB,
+                                          MAX_GAIN_DB,
+                                          MIN_GAIN_DB / GAIN_STEP_DB,
+                                          MAX_GAIN_DB / GAIN_STEP_DB));
+  qSelector.setAcceleratedPosition(map(settings->Q,
+                                       MIN_Q,
+                                       MAX_Q,
+                                       MIN_Q / Q_STEP,
+                                       MAX_Q / Q_STEP));
+  previousSelectedBand = selectedFilterBand;
+}
+
+ControlValues readControlValues()
+{
+  return {
+    exp10(map(float(fcSelector.geAcceleratedPosition()),
+              LOG_MIN_FREQUENCY / LOG_FREQ_STEP,
+              LOG_MAX_FREQUENCY / LOG_FREQ_STEP,
+              LOG_MIN_FREQUENCY,
+              LOG_MAX_FREQUENCY)),
+    map(float(qSelector.geAcceleratedPosition()),
+        MIN_Q / Q_STEP,
+        MAX_Q / Q_STEP,
+        MIN_Q,
+        MAX_Q),
+    map(float(gainSelector.geAcceleratedPosition()),
+        MIN_GAIN_DB / GAIN_STEP_DB,
+        MAX_GAIN_DB / GAIN_STEP_DB,
+        MIN_GAIN_DB,
+        MAX_GAIN_DB),
+    map(float(masterGainSelector.geAcceleratedPosition()),
+        MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB,
+        MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB,
+        MASTER_GAIN_MIN,
+        MASTER_GAIN_MAX),
+    map(float(volumeSelector.geAcceleratedPosition()),
+        VOLUME_MIN / VOLUME_STEP_DB,
+        VOLUME_MAX / VOLUME_STEP_DB,
+        VOLUME_MIN,
+        VOLUME_MAX),
+  };
+}
+
+void saveSettingsIfNeeded(time_t currentTime)
+{
+  if (!saveNeeded || currentTime - lastSaveTime <= SAVE_INTERVAL_MS)
+  {
+    return;
+  }
+
+  PersistedSettings persistedSettings;
+  for (int i = 0; i < FILTER_BANDS; i++)
+  {
+    persistedSettings.filterSettings[i] = filterSettings[i];
+  }
+  persistedSettings.selectedFilterBand = selectedFilterBand;
+  persistedSettings.displayMode = displayMode;
+  persistedSettings.volume = volume;
+  saveSettings(persistedSettings);
+  lastSaveTime = currentTime;
+  Serial.println("Settings saved to EEPROM.");
+  saveNeeded = false;
+}
+
+bool controlsUnchanged(const ControlSnapshot &snapshot, const ControlValues &values)
+{
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
+  return values.frequency == settings->frequency &&
+         snapshot.filterType == settings->type &&
+         values.gain == settings->gain &&
+         values.q == settings->Q &&
+         snapshot.selectedBand == selectedFilterBand &&
+         snapshot.displayMode == displayMode &&
+         values.masterGain == snapshot.masterGain &&
+         values.volume == volume;
+}
+
+void applyControlChanges(const ControlSnapshot &snapshot, const ControlValues &values)
+{
+  FilterSettings *settings = &filterSettings[selectedFilterBand];
+  bool filterNeedsUpdate = false;
+
+  Serial.printf("Frequency: %f Hz, Master gain: %f dB, Volume: %f dB\n",
+                values.frequency,
+                values.masterGain,
+                values.volume);
+
+  if (snapshot.filterType != settings->type)
+  {
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_TYPE |
+                           Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (values.frequency != settings->frequency)
+  {
+    settings->frequency = values.frequency;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_FREQ |
+                           Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (values.gain != settings->gain)
+  {
+    settings->gain = values.gain;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_GAIN |
+                           Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (values.q != settings->Q)
+  {
+    settings->Q = values.q;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_Q |
+                           Display::DISPLAY_CHANGE_FILTER_COEFFS;
+    filterNeedsUpdate = true;
+  }
+  if (snapshot.displayMode != displayMode)
+  {
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_DISPLAY_MODE;
+  }
+  if (values.masterGain != snapshot.masterGain)
+  {
+    masterGain = values.masterGain;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_IN_GAIN;
+  }
+  if (volume != values.volume)
+  {
+    volume = values.volume;
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_OUT_GAIN;
+    Serial.printf("Setting volume to %f dB\n", volume);
+    dac.setVolumeDB(volume);
+  }
+
+  gain.setGain(powf(10.0f, masterGain / 20.0f));
+
+  if (filterNeedsUpdate)
+  {
+    updateFilter(selectedFilterBand);
   }
 }
 
@@ -428,7 +769,8 @@ void blinkLED()
  * - Update the left and right channel filters based on the selected filter type
  * - Refresh the display when filter parameters change
  *
- * The function only updates filters when the frequency or filter type changes to optimize performance.
+ * The function only updates filters when the frequency or filter type changes
+ * to optimize performance.
  *
  * Supported filter types:
  * - LOWSHELF: Low shelf filter with configurable frequency, gain, and Q
@@ -444,177 +786,34 @@ void loop(void)
   static time_t lastDACCheck = 0;
   time_t currentTime = millis();
 
-  if(currentTime - lastDACCheck > DAC_CHECK_PERIOD) { // Check DAC every 5 seconds
-    if(!checkDAC()) {
-      dacRunning = false;
-      Serial.println("Lost contact with DAC!.");
-    } else if(!dacRunning) {
-      // DAC came back to life, reinitialize it
-      Serial.println("DAC came back online. Re-initializing.");
-      initDAC();
-      digitalWrite(LED_BUILTIN, LOW); // Turn off clip LED if it was on due to DAC failure
-    }
-    lastDACCheck = currentTime;
-  }
-
-  if(!dacRunning) {
+  // Is the DAC still connected? If not, blink the LED and keep checking until it comes back
+  checkDACConnection(currentTime, lastDACCheck);
+  if (!dacRunning)
+  {
     blinkLED();
   }
 
-  // Check if sample rate changed and update display if needed
-  uint32_t currentSampleRate = AudioController::getStandardizedSampleRate();
-  bool currentSampleRateStable = AudioController::isSampleRateStable();
-  if (currentSampleRate != lastSampleRate || currentSampleRateStable != lastSampleRateStable) {
-    lastSampleRate = currentSampleRate;
-    lastSampleRateStable = currentSampleRateStable;
-    displayUpdater.updateSampleRate();
-    Serial.printf("Sample rate changed: %u Hz (stable=%s)\n", currentSampleRate, currentSampleRateStable ? "true" : "false");
-  }
+  updateSampleRateStatus(lastSampleRate, lastSampleRateStable);
+  printStatusIfNeeded(currentTime, nextStatusPrint);
+  updateClipIndicator();
 
-  // Print CPU load every 2 seconds
-  if (currentTime >= nextStatusPrint)
-      {
-    Serial.println("----- Status -----");
-    Serial.printf("CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s\n", Timers::GetCpuLoad() * 100.0f, AudioController::getStandardizedSampleRate(), AudioController::isSampleRateStable() ? "true" : "false");
-    nextStatusPrint = currentTime + 2000; // Print every 2 seconds
-    Serial.printf("RMS Level: %f, / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
-    Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
-    Serial.printf("DAC R0=%02x, R229=%04x, R245=%02x, volume=%f dB\n", dac.readRegister8(0), dac.readRegister16(229), dac.readRegister8(245), dac.getCH1Volume());
-  }
+  // Capture current control states for comparison after ticking encoders
+  ControlSnapshot snapshot = captureControlSnapshot();
+  tickControls();
 
-  // Update clip indicator. Don't bother with this if the DAC is not running.
-  if(dacRunning) {
-    if (clipState == CLIP_TRIGGERED)
-    {
-      clipState = CLIP_ACTIVE;
-      clipTimestamp = millis();
-      digitalWrite(LED_BUILTIN, HIGH);
-    }
-    else if (clipState == CLIP_ACTIVE)
-    {
-      if ((millis() - clipTimestamp) > CLIP_CLEAR_DELAY_MS)
-      {
-        clipState = NO_CLIP;
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-    }
-  }
+  // If the selected band changed, we need to sync the encoder positions to the new band's settings
+  syncEncodersForSelectedBandIfNeeded(snapshot.selectedBand);
 
-  // Tick rotary encoders
-  FilterSettings *settings = &filterSettings[selectedFilterBand];
-  int oldFilterType = settings->type;
-  int oldSelectedBand = selectedFilterBand;
-  int oldDisplayMode = displayMode;
-  float oldMasterGain = masterGain;
-  fcSelector.tick();
-  gainSelector.tick();
-  qSelector.tick();
-  filterTypeSelectButton.tick(); // May change selectedFilterType!
-  filterSelectButton.tick();     // May change selectedFilterBand!
-  displayModeButton.tick();      // May change displayMode!
-  masterGainSelector.tick();     // May change master gain!
-  volumeSelector.tick();         // May change volume!
 
-  // If the filter band changed, we have to update all the rotary encoders to reflect current settings
-  if (oldSelectedBand != selectedFilterBand)
+  ControlValues values = readControlValues();
+  if (controlsUnchanged(snapshot, values))
   {
-    settings = &filterSettings[selectedFilterBand];
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_SELECT |
-                 Display::DISPLAY_CHANGE_FILTER_TYPE |
-                 Display::DISPLAY_CHANGE_FILTER_FREQ |
-                 Display::DISPLAY_CHANGE_FILTER_Q |
-                 Display::DISPLAY_CHANGE_FILTER_GAIN |
-                 Display::DISPLAY_CHANGE_FILTER_COEFFS;
-    // Update rotary encoders to reflect current settings
-    fcSelector.setAcceleratedPosition(map(log10(settings->frequency), LOG_MIN_FREQUENCY, LOG_MAX_FREQUENCY,
-                                          LOG_MIN_FREQUENCY / LOG_FREQ_STEP, LOG_MAX_FREQUENCY / LOG_FREQ_STEP));
-    gainSelector.setAcceleratedPosition(
-        map(settings->gain, MIN_GAIN_DB, MAX_GAIN_DB, MIN_GAIN_DB / GAIN_STEP_DB, MAX_GAIN_DB / GAIN_STEP_DB));
-    qSelector.setAcceleratedPosition(
-        map(settings->Q, MIN_Q, MAX_Q, MIN_Q / Q_STEP, MAX_Q / Q_STEP));
-  }
-
-  float newFrequency = exp10(map(float(fcSelector.geAcceleratedPosition()), LOG_MIN_FREQUENCY / LOG_FREQ_STEP,
-                                 LOG_MAX_FREQUENCY / LOG_FREQ_STEP, LOG_MIN_FREQUENCY, LOG_MAX_FREQUENCY));
-  float newQ = map(float(qSelector.geAcceleratedPosition()), MIN_Q / Q_STEP, MAX_Q / Q_STEP, MIN_Q, MAX_Q);
-  float newGain = map(float(gainSelector.geAcceleratedPosition()), MIN_GAIN_DB / GAIN_STEP_DB,
-                      MAX_GAIN_DB / GAIN_STEP_DB, MIN_GAIN_DB, MAX_GAIN_DB);
-  float newMasterGain = map(float(masterGainSelector.geAcceleratedPosition()), MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB,
-                            MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB, MASTER_GAIN_MIN, MASTER_GAIN_MAX);
-  float newVolume = map(float(volumeSelector.geAcceleratedPosition()), VOLUME_MIN / VOLUME_STEP_DB,
-                         VOLUME_MAX / VOLUME_STEP_DB, VOLUME_MIN, VOLUME_MAX);  
-
-  // Update filters only if parameters changed
-  settings = &filterSettings[selectedFilterBand]; // The band could have changed
-  if (newFrequency == settings->frequency && oldFilterType == settings->type && newGain == settings->gain && newQ == settings->Q &&
-      oldSelectedBand == selectedFilterBand && oldDisplayMode == displayMode && newMasterGain == oldMasterGain && newVolume == volume)
-  {
-    // Save to EEPROM if needed
-    unsigned long currentTime = millis();
-    if (saveNeeded && currentTime - lastSaveTime > SAVE_INTERVAL_MS)
-    {
-      PersistedSettings persistedSettings;
-      for (int i = 0; i < FILTER_BANDS; i++)
-      {
-        persistedSettings.filterSettings[i] = filterSettings[i];
-      }
-      persistedSettings.selectedFilterBand = selectedFilterBand;
-      persistedSettings.displayMode = displayMode;
-      persistedSettings.volume = volume;
-      saveSettings(persistedSettings);
-      lastSaveTime = currentTime;
-      Serial.println("Settings saved to EEPROM.");
-      saveNeeded = false;
-    }
+    saveSettingsIfNeeded(currentTime);
     return;
   }
-  Serial.printf("Frequency: %f Hz, Master gain: %f dB, Volume: %f dB\n", newFrequency, newMasterGain, newVolume);
-  bool filterNeedsUpdate = false;
-  if (oldFilterType != settings->type)
-  {
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_TYPE | Display::DISPLAY_CHANGE_FILTER_COEFFS;
-    filterNeedsUpdate = true;
-  }
-  if (newFrequency != settings->frequency)
-  {
-    settings->frequency = newFrequency;
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_FREQ | Display::DISPLAY_CHANGE_FILTER_COEFFS;
-    filterNeedsUpdate = true;
-  }
-  if (newGain != settings->gain)
-  {
-    settings->gain = newGain;
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_GAIN | Display::DISPLAY_CHANGE_FILTER_COEFFS;
-    filterNeedsUpdate = true;
-  }
-  if (newQ != settings->Q)
-  {
-    settings->Q = newQ;
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_FILTER_Q | Display::DISPLAY_CHANGE_FILTER_COEFFS;
-    filterNeedsUpdate = true;
-  }
-  if (oldDisplayMode != displayMode)
-  {
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_DISPLAY_MODE;
-  }
-  if (newMasterGain != oldMasterGain)
-  {
-    masterGain = newMasterGain;
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_IN_GAIN;
-  }
-  if(volume != newVolume) {
-    volume = newVolume;
-    displayChangeBitmap |= Display::DISPLAY_CHANGE_OUT_GAIN;
-    Serial.printf("Setting volume to %f dB\n", volume);
-    dac.setVolumeDB(volume);
-  }
-  gain.setGain(powf(10.0f, masterGain / 20.0f)); // Convert dB to linear
 
-  // Set up filter according to type
-  if (filterNeedsUpdate)
-  {
-    updateFilter(selectedFilterBand);
-  }
+
+  applyControlChanges(snapshot, values);
   displayUpdater.updateDisplay();
   saveNeeded = true;
 }

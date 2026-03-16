@@ -39,13 +39,14 @@ public:
 	virtual uint32_t getSampleRate(void) { return SAMPLERATE; }
 	virtual uint32_t getStandardizedSampleRate(void) { return SAMPLERATE; }
 	virtual bool isSampleRateStable(void) { return true; }
+	uint32_t getNumStableIntervals() { return numStableIntervals; }
 
 protected:
 	static DMAChannel dma;
 	static void isr(void);
-	static uint32_t interruptIntervalMicros;
-	static uint32_t numStableIntervals;
-	static uint32_t lastTimeStamp;
+	static volatile uint32_t interruptIntervalMicros;
+	static volatile uint32_t numStableIntervals;
+	static volatile uint32_t lastTimeStamp;
 };
 
 class AudioInputI2Sslave : public AudioInputI2S

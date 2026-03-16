@@ -4060,7 +4060,8 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x02_Pin")
-		(at 254 43.18 180)
+		(at 254 40.64 0)
+		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4068,7 +4069,7 @@
 		(dnp no)
 		(uuid "73a464ca-aa6a-47f1-a978-83d0a9a9ffc2")
 		(property "Reference" "J1"
-			(at 257.048 43.18 0)
+			(at 257.048 40.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4076,7 +4077,7 @@
 			)
 		)
 		(property "Value" "5V Analog"
-			(at 261.112 40.64 0)
+			(at 261.112 43.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4084,7 +4085,7 @@
 			)
 		)
 		(property "Footprint" "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical"
-			(at 254 43.18 0)
+			(at 254 40.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4093,7 +4094,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 254 43.18 0)
+			(at 254 40.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4102,7 +4103,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 254 43.18 0)
+			(at 254 40.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4117,7 +4118,7 @@
 			(uuid "2cf40412-6c4b-450c-840c-384867520a87")
 		)
 		(instances
-			(project ""
+			(project "regulator"
 				(path "/134eaab6-56fa-4d9f-a2e0-332a6380bb18"
 					(reference "J1")
 					(unit 1)
@@ -5431,16 +5432,16 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x02_Pin")
-		(at 255.27 55.88 180)
+		(at 255.27 53.34 0)
+		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "de2936b8-020a-43f7-96c1-b6bcc9cfbd1a")
 		(property "Reference" "J3"
-			(at 256.54 53.3399 0)
+			(at 256.54 55.8801 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5449,7 +5450,7 @@
 			)
 		)
 		(property "Value" "5V Digital"
-			(at 256.54 55.8799 0)
+			(at 256.54 53.3401 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5458,7 +5459,7 @@
 			)
 		)
 		(property "Footprint" "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical"
-			(at 255.27 55.88 0)
+			(at 255.27 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5467,7 +5468,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 255.27 55.88 0)
+			(at 255.27 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5476,7 +5477,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 255.27 55.88 0)
+			(at 255.27 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
