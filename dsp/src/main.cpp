@@ -806,7 +806,7 @@ void loop(void)
 
 
   ControlValues values = readControlValues();
-  if (controlsUnchanged(snapshot, values))
+  if (!controlsChanged(snapshot, values))
   {
     saveSettingsIfNeeded(currentTime);
     return;

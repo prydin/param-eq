@@ -375,30 +375,4 @@ void loop()
     updateFilterCoeffs(&registers);
     updateFilterParameters(&registers);
   }
-  /*
-  Packet *packet = popPacket();
-  if (packet == NULL)
-  {
-    return;
-  }
-  switch (packet->packetType)
-  {
-  case PACKET_COEFFS:
-    updateFilterCoeffs(packet);
-    masterGain = ntohf(packet->data.filters.masterGain);
-    break;
-  case PACKET_PARAMS:
-    updateFilterParameters(packet, masterGain);
-    break;
-  case PACKET_CLIP_ALERT:
-    updateClipAlert(packet->data.clipAlert.clipped);
-    if (packet->data.clipAlert.clipped)
-    {
-      Serial.println("Clipping detected!");
-    }
-    break;
-  default:
-    Serial.println("Unknown packet type received");
-    return;
-  } */
 }
