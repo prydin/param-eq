@@ -16,7 +16,7 @@ TFT_eSPI tft = TFT_eSPI(); // Create tft object
 #define MIN_GRAPH_FREQUENCY 2.0     // Minimum frequency for graph x axis
 
 #define SAMPLE_FREQ 44100.0f
-#define RESPONSE_POINTS 100
+#define RESPONSE_POINTS 240
 #ifndef UI_LIGHT_MODE
 #define UI_LIGHT_MODE 0
 #endif

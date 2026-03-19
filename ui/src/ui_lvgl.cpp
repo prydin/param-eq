@@ -19,9 +19,10 @@ namespace
     constexpr uint16_t kDrawBufferLines = 24;
     constexpr int16_t kChartMinDb = -15;
     constexpr int16_t kChartMaxDb = 15;
+    constexpr int16_t kChartDbScale = 10;
     constexpr float kMinGraphFrequency = 2.0f;
     constexpr float kMaxGraphFrequency = 20000.0f;
-    constexpr size_t kChartPoints = 100;
+    constexpr size_t kChartPoints = 240;
     constexpr lv_coord_t kChartX = 28;
     constexpr lv_coord_t kChartY = 10;
     constexpr lv_coord_t kChartWidth = 230;
@@ -58,7 +59,7 @@ namespace
     lv_color_t colorChartBg() { return UI_LIGHT_MODE ? lv_color_hex(0xd8d8d8) : lv_color_hex(0x0B1220); }
     lv_color_t colorChartBorder() { return UI_LIGHT_MODE ? lv_color_hex(0x64748B) : lv_color_hex(0x374151); }
     lv_color_t colorChartSelected() { return UI_LIGHT_MODE ? lv_color_hex(0x0369A1) : lv_color_hex(0x00D1FF); }
-    lv_color_t colorChartCombined() { return UI_LIGHT_MODE ? lv_color_hex(0x6B7280) : lv_color_hex(0xD1D5DB); }
+    lv_color_t colorChartCombined() { return UI_LIGHT_MODE ? lv_color_hex(0x16A34A) : lv_color_hex(0x22C55E); }
     lv_color_t colorOn() { return UI_LIGHT_MODE ? lv_color_hex(0x15803D) : lv_color_hex(0x16A34A); }
     lv_color_t colorOnText() { return UI_LIGHT_MODE ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x000000); }
     lv_color_t colorOffBg() { return UI_LIGHT_MODE ? lv_color_hex(0xE5E7EB) : lv_color_hex(0x1F2937); }
@@ -167,13 +168,14 @@ namespace
             }
 
             int16_t point = static_cast<int16_t>(values[i]);
-            if (point < kChartMinDb)
+            point = static_cast<int16_t>(values[i] * kChartDbScale);
+            if (point < kChartMinDb * kChartDbScale)
             {
-                point = kChartMinDb;
+                point = kChartMinDb * kChartDbScale;
             }
-            if (point > kChartMaxDb)
+            if (point > kChartMaxDb * kChartDbScale)
             {
-                point = kChartMaxDb;
+                point = kChartMaxDb * kChartDbScale;
             }
             series->y_points[i] = point;
         }
@@ -282,15 +284,15 @@ void ui_lvgl_init(TFT_eSPI &tft)
     lv_obj_set_size(g_chart, kChartWidth, kChartHeight);
     lv_chart_set_type(g_chart, LV_CHART_TYPE_LINE);
     lv_chart_set_point_count(g_chart, kChartPoints);
-    lv_chart_set_range(g_chart, LV_CHART_AXIS_PRIMARY_Y, kChartMinDb, kChartMaxDb);
+    lv_chart_set_range(g_chart, LV_CHART_AXIS_PRIMARY_Y, kChartMinDb * kChartDbScale, kChartMaxDb * kChartDbScale);
     lv_obj_set_style_bg_color(g_chart, colorChartBg(), 0);
     lv_obj_set_style_bg_opa(g_chart, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(g_chart, colorChartBorder(), 0);
     lv_obj_set_style_border_width(g_chart, 1, 0);
     lv_obj_set_style_radius(g_chart, 0, 0);
     lv_obj_set_style_pad_all(g_chart, 0, LV_PART_MAIN);
+    lv_obj_set_style_line_rounded(g_chart, true, LV_PART_ITEMS);
     lv_obj_set_style_line_width(g_chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_line_rounded(g_chart, false, LV_PART_ITEMS);
     lv_obj_set_style_size(g_chart, 0, LV_PART_INDICATOR);
     lv_chart_set_div_line_count(g_chart, 7, 5);
     lv_obj_set_style_line_color(g_chart, lv_color_hex(0x808080), LV_PART_MAIN);
@@ -341,31 +343,31 @@ void ui_lvgl_init(TFT_eSPI &tft)
 
     lv_obj_t *labelFs = lv_label_create(scr);
     lv_label_set_text(labelFs, "Fs");
-    lv_obj_set_pos(labelFs, kPanelX + 4, 16);
+    lv_obj_set_pos(labelFs, kPanelX + 4, 21);
     lv_obj_set_size(labelFs, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelFs);
 
     lv_obj_t *labelM = lv_label_create(scr);
     lv_label_set_text(labelM, "MG");
-    lv_obj_set_pos(labelM, kPanelX + 4, 48);
+    lv_obj_set_pos(labelM, kPanelX + 4, 53);
     lv_obj_set_size(labelM, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelM);
 
     lv_obj_t *labelF = lv_label_create(scr);
     lv_label_set_text(labelF, "FG");
-    lv_obj_set_pos(labelF, kPanelX + 4, 80);
+    lv_obj_set_pos(labelF, kPanelX + 4, 85);
     lv_obj_set_size(labelF, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelF);
 
     lv_obj_t *labelQ = lv_label_create(scr);
     lv_label_set_text(labelQ, "Q");
-    lv_obj_set_pos(labelQ, kPanelX + 4, 112);
+    lv_obj_set_pos(labelQ, kPanelX + 4, 117);
     lv_obj_set_size(labelQ, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelQ);
 
     lv_obj_t *labelVol = lv_label_create(scr);
     lv_label_set_text(labelVol, "Vol");
-    lv_obj_set_pos(labelVol, kPanelX + 4, 142);
+    lv_obj_set_pos(labelVol, kPanelX + 4, 147);
     lv_obj_set_size(labelVol, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelVol);
 
