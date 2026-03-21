@@ -55,7 +55,7 @@ namespace
 
     uint32_t g_lastTickMs = 0;
 
-    lv_color_t colorScreenBg() { return UI_LIGHT_MODE ? lv_color_hex(0xF3F4F6) : lv_color_hex(0x05070A); }
+    lv_color_t colorScreenBg() { return UI_LIGHT_MODE ? lv_color_hex(0xF3F4F6) : lv_color_hex(0x000000); }
     lv_color_t colorChartBg() { return UI_LIGHT_MODE ? lv_color_hex(0xd8d8d8) : lv_color_hex(0x0B1220); }
     lv_color_t colorChartBorder() { return UI_LIGHT_MODE ? lv_color_hex(0x64748B) : lv_color_hex(0x374151); }
     lv_color_t colorChartSelected() { return UI_LIGHT_MODE ? lv_color_hex(0x0369A1) : lv_color_hex(0x00D1FF); }
@@ -342,19 +342,19 @@ void ui_lvgl_init(TFT_eSPI &tft)
     lv_obj_set_style_pad_all(panel, 0, 0);
 
     lv_obj_t *labelFs = lv_label_create(scr);
-    lv_label_set_text(labelFs, "Fs");
+    lv_label_set_text(labelFs, "FSampl");
     lv_obj_set_pos(labelFs, kPanelX + 4, 21);
     lv_obj_set_size(labelFs, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelFs);
 
     lv_obj_t *labelM = lv_label_create(scr);
-    lv_label_set_text(labelM, "MG");
+    lv_label_set_text(labelM, "Pre Gain");
     lv_obj_set_pos(labelM, kPanelX + 4, 53);
     lv_obj_set_size(labelM, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelM);
 
     lv_obj_t *labelF = lv_label_create(scr);
-    lv_label_set_text(labelF, "FG");
+    lv_label_set_text(labelF, "Filt Gain");
     lv_obj_set_pos(labelF, kPanelX + 4, 85);
     lv_obj_set_size(labelF, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelF);
@@ -366,7 +366,7 @@ void ui_lvgl_init(TFT_eSPI &tft)
     styleMetricLabel(labelQ);
 
     lv_obj_t *labelVol = lv_label_create(scr);
-    lv_label_set_text(labelVol, "Vol");
+    lv_label_set_text(labelVol, "Volume");
     lv_obj_set_pos(labelVol, kPanelX + 4, 147);
     lv_obj_set_size(labelVol, kPanelWidth - 8, LV_SIZE_CONTENT);
     styleMetricLabel(labelVol);
