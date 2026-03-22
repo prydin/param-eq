@@ -2,7 +2,7 @@
 #define FILTER_H_
 #include <Arduino.h>
 
-#define FILTER_BANDS 3
+#define FILTER_BANDS 5
 
 // Band selection
 #define LOW_BAND 0
