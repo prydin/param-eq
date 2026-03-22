@@ -18,36 +18,57 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-#ifndef AUDIO_COMPONENT_H
-#define AUDIO_COMPONENT_H
-#include <stdlib.h>
-#include <vector>
+#ifndef AUDIO_BUFFER_FIFO_H
+#define AUDIO_BUFFER_FIFO_H
+
+#include <stddef.h>
+#include <stdint.h>
 #include "audio_buffer.h"
 
-#define AUDIO_CHANNELS 2
+struct AudioBufferFifoStats
+{
+    size_t level;
+    size_t highWatermark;
+    size_t capacity;
+    uint32_t overruns;
+    uint32_t underruns;
+};
 
-class AudioComponent {
+class AudioBufferFifo
+{
 public:
-    AudioComponent() {};
-    ~AudioComponent() {};
-    virtual void process(AudioBuffer* block) {};
-    void addReceiver(AudioComponent* recipient) {
-        outputs.push_back(recipient);
-    }
-    AudioBuffer* clone(AudioBuffer* source) {
-        return AudioBufferPool::getInstance().clone(source);
-    }
-    AudioBuffer* getBuffer() {
-        return AudioBufferPool::getInstance().getBuffer();
-    }   
-    void release(AudioBuffer* block) {
-        block->release();
-    }
+    explicit AudioBufferFifo(size_t capacity);
+    ~AudioBufferFifo();
 
-protected:  
-    void transmit(AudioBuffer* block);
+    // Returns false on overrun and leaves the FIFO unchanged.
+    bool push(AudioBuffer *buffer);
+
+    // Returns the next queued buffer, or a zero-filled buffer on underrun.
+    AudioBuffer *pop();
+
+    // Returns the next queued buffer, or nullptr if FIFO is empty.
+    AudioBuffer *tryPop();
+
+    void clear();
+    void getStats(AudioBufferFifoStats *stats) const;
+    void resetStats();
+
+    size_t size() const { return count; }
+    size_t maxSize() const { return capacity; }
+    bool empty() const { return count == 0; }
+    bool full() const { return count == capacity; }
 
 private:
-    std::vector<AudioComponent*> outputs;
+    AudioBuffer *allocateZeroBuffer() const;
+
+    AudioBuffer **slots;
+    size_t capacity;
+    size_t head;
+    size_t tail;
+    size_t count;
+    size_t highWatermark;
+    uint32_t overruns;
+    uint32_t underruns;
 };
-#endif // AUDIO_COMPONENT_H
+
+#endif // AUDIO_BUFFER_FIFO_H

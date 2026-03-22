@@ -31,7 +31,7 @@ public:
     // Set gain as a linear factor (1.0 = unity gain, 0.5 = half volume, 2.0 = double, etc.)
     void setGain(float linearGain);
     
-    // Set gain in decibels (0 dB = unity gain, -6 dB = half volume, +6 dB â‰ˆ double, etc.)
+    // Set gain in decibels (0 dB = unity gain, -6 dB = half volume, +6 dB ~= double, etc.)
     void setGainDb(float gainDb);
     
     // Override the audio processing method

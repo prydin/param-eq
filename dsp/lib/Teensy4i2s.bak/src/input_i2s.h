@@ -25,10 +25,36 @@
  */
 
 #pragma once
-#include "DMAChannel.h"
-#include "AudioConfig.h"
-#include "i2s_timers.h"
 
-#include "control_TLV320AIC3204.h"
-#include "input_i2s.h"
-#include "output_i2s.h"
+#include <Arduino.h>
+#include <DMAChannel.h>
+// #include "buffer_queue.h"
+
+class AudioInputI2S
+{
+public:
+	AudioInputI2S() {}
+	void begin();
+	static int32_t **getData();
+	virtual uint32_t getSampleRate(void) { return SAMPLERATE; }
+	virtual uint32_t getStandardizedSampleRate(void) { return SAMPLERATE; }
+	virtual bool isSampleRateStable(void) { return true; }
+	uint32_t getNumStableIntervals() { return numStableIntervals; }
+
+protected:
+	static DMAChannel dma;
+	static void isr(void);
+	static volatile uint32_t interruptIntervalMicros;
+	static volatile uint32_t numStableIntervals;
+	static volatile uint32_t lastTimeStamp;
+};
+
+class AudioInputI2Sslave : public AudioInputI2S
+{
+public:
+	AudioInputI2Sslave(void) : AudioInputI2S() {}
+	void begin(void);
+	virtual uint32_t getSampleRate(void) override;
+	virtual bool isSampleRateStable(void) override;
+	virtual uint32_t getStandardizedSampleRate(void) override;
+};

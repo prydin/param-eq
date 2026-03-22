@@ -29,6 +29,8 @@ struct PersistedSettings
     FilterSettings filterSettings[FILTER_BANDS]; // Settings for low, mid, high bands
     uint8_t selectedFilterBand;                // Currently selected filter band
     uint8_t displayMode;                       // Current display mode
+    uint16_t reserved;                         // Explicit padding for stable EEPROM layout
+    float masterGain;                          // Current input/master gain in dB
     float volume;                              // Current volume
     uint32_t checksum;                         // Checksum for data integrity
 };

@@ -56,16 +56,6 @@ void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, f
 #else
     arm_biquad_cascade_df2T_f32(iir_inst, input, output, AUDIO_BLOCK_SAMPLES);
 #endif
-    bool clipped = false;
-    // Check for clipping and limit output to [-1.0, 1.0]
-    for (uint32_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-    {
-        if (output[i] >= 1.0f || output[i] <= -1.0f)
-        {
-            clipped = true;
-            break;
-        }
-    }
 }
 
 void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)

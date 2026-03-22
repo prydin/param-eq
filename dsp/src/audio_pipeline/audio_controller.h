@@ -20,45 +20,80 @@
 // SOFTWARE.
 #ifndef AUDIO_CONTROLLER_H
 #define AUDIO_CONTROLLER_H
-#include <Teensy4i2s.h>
+#include "audio_i2s.h"
 #include "audio_component.h"
+#include "audio_source.h"
 
-class AudioController : public AudioComponent {
+class AudioController : public AudioComponent
+{
 public:
-    void process(AudioBuffer* block) override;
+    void process(AudioBuffer *block) override;
 
-    static void processAudio(int32_t **inputs, int32_t **outputs);
+    static void audioCallback(int32_t **inputs, int32_t **outputs);
 
-    static AudioController* getInstance() {
+    void processAudio(int32_t **inputs, int32_t **outputs);
+    void syncSinkSampleRate();
+
+    static AudioController *getInstance()
+    {
         static AudioController instance;
         return &instance;
-    }   
+    }
 
-    void setClipDetector(void (*detector)(bool clipped)) {
+    void setClipDetector(void (*detector)(bool clipped))
+    {
         getInstance()->clipDetector = detector;
     }
 
-    void setSampleRate(uint32_t rate) {
+    void setSampleRate(uint32_t rate)
+    {
         getInstance()->sampleRate = rate;
     }
 
-    static uint32_t getSampleRate() {
-        return sampleRate ? sampleRate : (audioInputI2S ? audioInputI2S->getSampleRate() : 44100);
+    uint32_t getInstanceSampleRate()
+    {
+        return sampleRate ? sampleRate : (source ? source->getSampleRate() : 44100);
     }
 
-    static uint32_t getStandardizedSampleRate() {
-        return audioInputI2S ? audioInputI2S->getStandardizedSampleRate() : 44100;
-    }
-    static bool isSampleRateStable() {
-        return audioInputI2S ? audioInputI2S->isSampleRateStable() : false;
+    static uint32_t getSampleRate()
+    {
+        return getInstance()->getInstanceSampleRate();
     }
 
-    static uint32_t getNumStableIntervals() {
-        return audioInputI2S ? audioInputI2S->getNumStableIntervals() : 0;
+    uint32_t getInstanceStandardizedSampleRate()
+    {
+        return source ? source->getStandardizedSampleRate() : 44100;
     }
 
-    void enable(bool en) {
+    static uint32_t getStandardizedSampleRate()
+    {
+        return getInstance()->getInstanceStandardizedSampleRate();
+    }
+
+
+    bool isInstanceSampleRateStable()
+    {
+        return source ? source->isSampleRateStable() : false;
+    }
+
+    static bool isSampleRateStable()
+    {
+        return getInstance()->isInstanceSampleRateStable();
+    }
+
+    void enable(bool en)
+    {
         enabled = en;
+    }
+
+    void setSource(AudioSource *src)
+    {
+        source = src;
+    }
+
+    void setSink(AudioOutputI2S *snk)
+    {
+        sink = snk;
     }
 
 private:
@@ -67,6 +102,8 @@ private:
     void (*clipDetector)(bool clipped) = nullptr;
     bool enabled = true;
     static uint32_t sampleRate;
+    AudioSource *source = nullptr;
+    AudioOutputI2S *sink = nullptr;
 };
 
-#endif // AUDIO_CONTROLLER_H 
+#endif // AUDIO_CONTROLLER_H

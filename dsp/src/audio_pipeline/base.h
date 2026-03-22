@@ -20,9 +20,12 @@
 // SOFTWARE.
 #ifndef BASE_H
 #define BASE_H
-#include <Teensy4i2s.h>
+#include "audio_config.h"
 #define AUDIO_CHANNELS 2
 #define BUFFER_POOL_SIZE 64
+
+#define LEFT_CHANNEL 0
+#define RIGHT_CHANNEL 1
 
 // #define USE_DOUBLE_SAMPLES
 

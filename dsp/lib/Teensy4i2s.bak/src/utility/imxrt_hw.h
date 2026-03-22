@@ -1,5 +1,5 @@
 /* Audio Library for Teensy 3.X
- * Copyright (c) 2014, Paul Stoffregen, paul@pjrc.com
+ * Copyright (c) 2019, Paul Stoffregen, paul@pjrc.com
  *
  * Development of this audio library was funded by PJRC.COM, LLC by sales of
  * Teensy and Audio Adaptor boards.  Please support PJRC's efforts to develop
@@ -23,12 +23,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+/*
+ (c) Frank B
+*/
 #pragma once
-#include "DMAChannel.h"
-#include "AudioConfig.h"
-#include "i2s_timers.h"
+#define IMXRT_CACHE_ENABLED 2 // 0=disabled, 1=WT, 2= WB
 
-#include "control_TLV320AIC3204.h"
-#include "input_i2s.h"
-#include "output_i2s.h"
+#include <Arduino.h>
+#include <imxrt.h>
+
+void set_audioClock(int nfact, int32_t nmult, uint32_t ndiv,  bool force = false); // sets PLL4
+

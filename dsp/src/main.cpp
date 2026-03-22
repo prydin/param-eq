@@ -23,7 +23,7 @@
  * @brief Teensy-based parametric equalizer with rotary encoder controls and I2S audio output.
  *
  * This file implements a real-time audio parametric equalizer system using the
- * Teensy Audio Library.
+ * local audio pipeline and Teensy I2S backend.
  * It provides three-band equalization (low, mid, high) with selectable filter types (low shelf,
  * high shelf, peaking EQ). User controls include rotary encoders for frequency, gain, and Q
  * adjustment, along with pushbuttons for filter band and type selection.
@@ -32,12 +32,10 @@
  * the result via I2S. Filter coefficients and parameters are transmitted to an external display
  * via I2C communication.
  *
- * @note Requires Teensy Audio Library, OneButton, ErriezCRC32, and AcceleratedEncoder libraries.
+ * @note Requires OneButton, ErriezCRC32, and AcceleratedEncoder libraries.
  * @note I2C display address is hardcoded to 0xb1ce.
  * @note Audio processing uses floating-point biquad filters for precise frequency response control.
  */
-#include <Teensy4i2s.h>
-#include <Wire.h>
 #include <Wire.h>
 #include <SD.h>
 #include <SerialFlash.h>
@@ -51,6 +49,8 @@
 #include "audio_pipeline/audio_gain.h"
 #include "audio_pipeline/audio_rms.h"
 #include "audio_pipeline/audio_controller.h"
+#include "audio_pipeline/audio_i2s.h"
+#include "audio_pipeline/audio_usb.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
@@ -100,10 +100,18 @@
 #define Q_PIN_A 39
 #define Q_PIN_B 40
 #define FILTER_MODE_PIN 41
+#define UI_MODE_BUTTON_PIN 1
 #define INPUT_GAIN_PIN_A 2
 #define INPUT_GAIN_PIN_B 3
 #define VOLUME_PIN_A 11
 #define VOLUME_PIN_B 12
+
+enum UiMode : uint8_t
+{
+  UI_MODE_FILTER = 0,
+  UI_MODE_SPECTRUM = 1,
+  UI_MODE_SIMPLE = 2,
+};
 
 // Settings save interval
 #define SAVE_INTERVAL_MS 5000
@@ -130,10 +138,13 @@ AcceleratedEncoder volumeSelector(VOLUME_PIN_A, VOLUME_PIN_B);
 OneButton filterSelectButton(FILTER_INDEX_PIN, true);
 OneButton filterTypeSelectButton(FILTER_TYPE_PIN, true);
 OneButton displayModeButton(FILTER_MODE_PIN, true);
+OneButton uiModeButton(UI_MODE_BUTTON_PIN, true);
 
 AudioSquareWave waveform;
 #ifdef TESTMODE
 TestTone testTone(1000, 48000);
+#else
+AudioInputUSBEx usbInput;
 #endif
 
 // The filters
@@ -142,10 +153,13 @@ AudioFilterBiquadFloat filter;
 AudioGain gain;
 AudioRMS rmsMeter;
 
+AudioOutputI2S i2sOut;
+
 // User settings
 FilterSettings filterSettings[FILTER_BANDS];
 int selectedFilterBand = LOW_BAND;
 int displayMode = DISPLAY_MODE_INDIVIDUAL;
+UiMode uiMode = UI_MODE_FILTER;
 float masterGain = 0.0f;
 float volume = 0.0f;
 
@@ -294,7 +308,7 @@ void clipDetected(bool clipped)
  * - Q factor selector initialized to 707 (Q=0.707)
  * - Filter type button callback to cycle through 3 filter types
  * - I2C communication via Wire interface
- * - Additional analog inputs (A10, A11, A12) and digital pin 10 as chip select
+ * - Additional analog inputs (A10, A11, A12)
  * - Audio mixer gains set to 0.5 for both left and right channels
  */
 void setup(void)
@@ -310,10 +324,12 @@ void setup(void)
 
 #ifdef TESTMODE
   testTone.addReceiver(&gain);
-  AudioController::getInstance()->addReceiver(&testTone);
+  AudioController::getInstance()->setSource(&testTone);
 #else
-  AudioController::getInstance()->addReceiver(&gain);
+  AudioController::getInstance()->setSource(&usbInput);
+  usbInput.addReceiver(&gain);
 #endif
+  AudioController::getInstance()->setSink(&i2sOut);
   AudioController::getInstance()->setClipDetector(clipDetected);
 
   // Make sure pins 5 and 6 are in input mode (due to a PCB design issue)
@@ -330,12 +346,13 @@ void setup(void)
   delay(100);
 
 #ifdef TESTMODE
-  InitI2s(false);
+  i2sOut.begin();
   AudioController::getInstance()->setSampleRate(96000);
 
   // testTone.begin();
 #else
-  InitI2s(true);
+  usbInput.begin();
+  i2sOut.begin();
 #endif
   // waveform.setAmplitude(0.5f);
   // waveform.setFrequency(980.0f); // 980 Hz test tone
@@ -379,6 +396,11 @@ void setup(void)
     Serial.printf("Selected display mode: %d\n", displayMode);
   });
 
+  uiModeButton.attachPress([]() {
+    uiMode = static_cast<UiMode>((static_cast<uint8_t>(uiMode) + 1) % 3);
+    Serial.printf("Selected UI mode: %u\n", static_cast<unsigned>(uiMode));
+  });
+
   // Initialize S2C
   Wire.begin();
 
@@ -386,7 +408,7 @@ void setup(void)
   pinMode(A10, INPUT);
   pinMode(A11, INPUT);
   pinMode(A12, INPUT);
-  pinMode(10, OUTPUT);
+  pinMode(UI_MODE_BUTTON_PIN, INPUT_PULLUP);
 
   // Reset last save time
   lastSaveTime = millis();
@@ -401,7 +423,9 @@ void setup(void)
     }
     selectedFilterBand = persistedSettings.selectedFilterBand;
     displayMode = persistedSettings.displayMode;
+    masterGain = persistedSettings.masterGain;
     volume = persistedSettings.volume;
+    gain.setGain(powf(10.0f, masterGain / 20.0f));
     dac.setVolumeDB(volume);
     Serial.println("Loaded persisted settings from EEPROM.");
   }
@@ -433,9 +457,9 @@ void setup(void)
   masterGainSelector.setEndpoints(
       MASTER_GAIN_MIN / MASTER_GAIN_STEP_DB,
       MASTER_GAIN_MAX / MASTER_GAIN_STEP_DB); // -20 dB to 20 dB
-  masterGainSelector.setAcceleratedPosition(0); // 0 dB
+  masterGainSelector.setAcceleratedPosition(masterGain / MASTER_GAIN_STEP_DB);
   volumeSelector.setEndpoints(VOLUME_MIN / VOLUME_STEP_DB, VOLUME_MAX / VOLUME_STEP_DB);
-  volumeSelector.setAcceleratedPosition(0); // 0 dB
+  volumeSelector.setAcceleratedPosition(volume / VOLUME_STEP_DB);
 
   // Initial display update
   updateAllFilters();
@@ -546,11 +570,10 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
 
   Serial.println("----- Status -----");
   Serial.printf(
-    "CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s, stable intervals: %u\n",
+    "CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s\n",
     Timers::GetCpuLoad() * 100.0f,
     AudioController::getStandardizedSampleRate(),
-    AudioController::isSampleRateStable() ? "true" : "false",
-    AudioController::getNumStableIntervals());
+    AudioController::isSampleRateStable() ? "true" : "false");
   nextStatusPrint = currentTime + 2000;
   Serial.printf("RMS Level: %f, / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
   Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
@@ -600,6 +623,7 @@ void tickControls()
   filterTypeSelectButton.tick();
   filterSelectButton.tick();
   displayModeButton.tick();
+  uiModeButton.tick();
   masterGainSelector.tick();
   volumeSelector.tick();
 }
@@ -635,12 +659,13 @@ void syncEncodersForSelectedBandIfNeeded(int previousSelectedBand)
 
 ControlValues readControlValues()
 {
+  float frequency = static_cast<float>(exp10(map(float(fcSelector.geAcceleratedPosition()),
+                                                LOG_MIN_FREQUENCY / LOG_FREQ_STEP,
+                                                LOG_MAX_FREQUENCY / LOG_FREQ_STEP,
+                                                LOG_MIN_FREQUENCY,
+                                                LOG_MAX_FREQUENCY)));
   return {
-    exp10(map(float(fcSelector.geAcceleratedPosition()),
-              LOG_MIN_FREQUENCY / LOG_FREQ_STEP,
-              LOG_MAX_FREQUENCY / LOG_FREQ_STEP,
-              LOG_MIN_FREQUENCY,
-              LOG_MAX_FREQUENCY)),
+    frequency,
     map(float(qSelector.geAcceleratedPosition()),
         MIN_Q / Q_STEP,
         MAX_Q / Q_STEP,
@@ -678,6 +703,7 @@ void saveSettingsIfNeeded(time_t currentTime)
   }
   persistedSettings.selectedFilterBand = selectedFilterBand;
   persistedSettings.displayMode = displayMode;
+  persistedSettings.masterGain = masterGain;
   persistedSettings.volume = volume;
   saveSettings(persistedSettings);
   lastSaveTime = currentTime;
@@ -793,6 +819,7 @@ void loop(void)
     blinkLED();
   }
 
+  AudioController::getInstance()->syncSinkSampleRate();
   updateSampleRateStatus(lastSampleRate, lastSampleRateStable);
   printStatusIfNeeded(currentTime, nextStatusPrint);
   updateClipIndicator();

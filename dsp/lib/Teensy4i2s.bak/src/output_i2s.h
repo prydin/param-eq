@@ -25,10 +25,35 @@
  */
 
 #pragma once
-#include "DMAChannel.h"
-#include "AudioConfig.h"
-#include "i2s_timers.h"
 
-#include "control_TLV320AIC3204.h"
-#include "input_i2s.h"
-#include "output_i2s.h"
+#include <Arduino.h>
+#include <DMAChannel.h>
+
+extern void (*i2sAudioCallback)(int32_t** inputs, int32_t** outputs);
+
+class AudioOutputI2S
+{
+public:
+	static bool Enabled;
+	AudioOutputI2S(void) { }
+	virtual void begin(void);
+	friend class AudioInputI2S;
+
+protected:
+	static void config_i2s(bool only_bclk = false);
+	static bool isConfigured;
+	static DMAChannel dma;
+	static void isr(void);
+};
+
+class AudioOutputI2Sslave : public AudioOutputI2S
+{
+public:
+	AudioOutputI2Sslave(void) : AudioOutputI2S() { } ;
+	virtual void begin(void) override;
+	friend class AudioInputI2Sslave;
+	friend void dma_ch0_isr(void);
+protected:
+	static void config_i2s(void);
+};
+

@@ -366,7 +366,7 @@ public:
      * @param mask Bit mask
      * @param value Value to write
      */
-    void ES9039Q2M::writeRegisterMasked16(uint8_t reg, uint16_t mask, uint16_t value);
+    void writeRegisterMasked16(uint8_t reg, uint16_t mask, uint16_t value);
 
     /**
      * @brief Reads a 24-bit signed integer value from a register.
