@@ -463,8 +463,9 @@ void setup(void)
 
   // Initial display update
   updateAllFilters();
-  delay(1000); // Wait for display to be fully initialized
-  displayChangeBitmap = Display::DISPLAY_CHANGE_ALL;
+  delay(2000); // Wait for display to be fully initialized
+  displayChangeBitmap = Display::DISPLAY_CHANGE_ALL |
+                        Display::DISPLAY_CHANGE_FULL_FILTER_SYNC;
   displayUpdater.updateDisplay();
 }
 
@@ -835,6 +836,8 @@ void loop(void)
   ControlValues values = readControlValues();
   if (!controlsChanged(snapshot, values))
   {
+    // Retry deferred display updates (e.g. if display was not ready during setup).
+    displayUpdater.updateDisplay();
     saveSettingsIfNeeded(currentTime);
     return;
   }

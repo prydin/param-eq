@@ -39,6 +39,7 @@ public:
   static constexpr uint16_t DISPLAY_CHANGE_IN_GAIN = 1u << 6;
   static constexpr uint16_t DISPLAY_CHANGE_OUT_GAIN = 1u << 7;
   static constexpr uint16_t DISPLAY_CHANGE_FILTER_COEFFS = 1u << 8;
+  static constexpr uint16_t DISPLAY_CHANGE_FULL_FILTER_SYNC = 1u << 9;
   static constexpr uint16_t DISPLAY_CHANGE_ALL = DISPLAY_CHANGE_FILTER_SELECT |
                                                  DISPLAY_CHANGE_DISPLAY_MODE |
                                                  DISPLAY_CHANGE_FILTER_TYPE |
@@ -58,10 +59,13 @@ public:
           float &volume,
           uint16_t &displayChangeBitmap);
 
-  void updateDisplayRegister(uint8_t reg, uint32_t value);
+  bool updateDisplayRegister(uint8_t reg, uint32_t value);
   void updateDisplay();
   void updateSampleRate();
   void commit();
+
+  // True if no pending display changes remain.
+  bool isIdle() const { return displayChangeBitmap == 0; }
 
 private:
   TwoWire &wire;

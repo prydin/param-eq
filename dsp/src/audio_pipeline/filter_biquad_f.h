@@ -25,8 +25,9 @@
 #include "base.h"
 #include "arm_math.h"
 #include "audio_component.h"
+#include "../../common/filter.h"
 
-#define MAX_BIQUAD_STAGES 4
+#define MAX_BIQUAD_STAGES FILTER_BANDS
 #define STAGE_COEFFICIENTS 5
 #define NUM_STATES 4
 

@@ -60,6 +60,11 @@ void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, f
 
 void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
 {
+    if (stage >= MAX_BIQUAD_STAGES)
+    {
+        return;
+    }
+
     __disable_irq();
     for (int i = 0; i < STAGE_COEFFICIENTS; i++)
     {
@@ -86,6 +91,11 @@ void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
 
 void AudioFilterBiquadFloat::setSosCoefficients(uint32_t stages, const sample_t *sos)
 {
+    if (stages > MAX_BIQUAD_STAGES)
+    {
+        stages = MAX_BIQUAD_STAGES;
+    }
+
     __disable_irq();
     for (uint32_t i = 0; i < stages * STAGE_COEFFICIENTS; i++)
     {
