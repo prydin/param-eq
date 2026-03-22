@@ -2,7 +2,14 @@
 
 ## Introduction
 This is (at least so far) just a playground for my experiments with digital parametric equalizers. 
+
+### User interface
 ![UI](images/ui.png)
+
+### Interior
+![interior](images/interior.png)
+
+### Early prototype
 ![UI](images/ratsnest.png)
 
 ### The DSP module
@@ -10,15 +17,15 @@ This repo contains a (mostly) working prototype of a three band digital equalize
 microcontroller board, which features a ARM Cortex M7 chip. This little processor has some impressive
 floating point performance for a chip costing a few dollars. Anecdotally, you can squeeze out hundreds
 of MFLOPS from it. Because of this, I decided to do all my filter calculations using single precision
-floats, since they're about as fast as 32-bit integers. And it makes everything SO much easier!
+floats, since they're about as fast as 32-bit integers. And it makes everything SO much easier! There's
+also a compile-time option to use double-precision.
 
 I currently offer three types of filters: Peak, low shelf and high shelf. In addition to this, there's
 an identity filter that just passes the signal straight through that can be used to disable some of
 the filters.
 
-The audio pipeline is based on the Teensy Audio Library. It works great, but it's limited to CD quality.
-At some point, I'm going to build my own audio pipeline and I'll probably make it floating point all
-the way through. Because I can and it makes it a lot easier to avoid overflows and loss of precision.
+Sinc the Teensy Audio Library only uses 16-bit integers and is limited to 44.1kHz samle rate, I wrote
+my own audio pipeline that's based on a highly simplified version of the Teensy library. 
 
 ### The UI module
 So far, the project features three rotary encoders. They are used to vary the frequency, gain and Q of
