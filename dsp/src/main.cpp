@@ -171,7 +171,8 @@ Display displayUpdater(Wire,
                        displayMode,
                        masterGain,
                        volume,
-                       displayChangeBitmap);
+                       displayChangeBitmap,
+                       uiMode);
 
 
 // Last time settings were saved to EEPROM
@@ -398,6 +399,7 @@ void setup(void)
 
   uiModeButton.attachPress([]() {
     uiMode = static_cast<UiMode>((static_cast<uint8_t>(uiMode) + 1) % 3);
+    displayChangeBitmap |= Display::DISPLAY_CHANGE_UI_MODE;
     Serial.printf("Selected UI mode: %u\n", static_cast<unsigned>(uiMode));
   });
 

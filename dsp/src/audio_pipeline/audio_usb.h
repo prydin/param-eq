@@ -29,11 +29,11 @@
 #ifdef AUDIO_INTERFACE
 
 #ifndef AUDIO_USB_TX_FIFO_SIZE
-#define AUDIO_USB_TX_FIFO_SIZE 8
+#define AUDIO_USB_TX_FIFO_SIZE 64
 #endif
 
 #ifndef AUDIO_USB_RX_FIFO_SIZE
-#define AUDIO_USB_RX_FIFO_SIZE 8
+#define AUDIO_USB_RX_FIFO_SIZE 64
 #endif
 
 #define FEATURE_MAX_VOLUME 0xFF  // volume accepted from 0 to 0xFF
@@ -64,7 +64,9 @@ class AudioInputUSBEx : public AudioSource
 public:
 	AudioInputUSBEx(void) { begin(); }
 	virtual void process(AudioBuffer *block) override;
+	// Initializes RX-side state and clears any pending partial USB packet data.
 	void begin(void);
+	// Returns one fully assembled audio block from USB RX, or null if none ready.
 	AudioBuffer *getNextBlock(void);
 	static bool getRxFifoStats(AudioBufferFifoStats *stats);
 	uint32_t getSampleRate() { return measured_sample_rate; }
@@ -82,10 +84,13 @@ public:
 		return (float)(features.volume) * (1.0 / (float)FEATURE_MAX_VOLUME);
 	}
 private:
+	// RX path: ISR assembles packets into blocks, main loop consumes blocks.
 	static AudioBufferFifo *rx_fifo;
 	static AudioBuffer *incoming_buffer;
 	static uint16_t incoming_count;
 	static uint8_t receive_flag;
+
+	// Sample-rate tracking/locking state.
 	static volatile uint32_t measured_sample_rate;
 	static volatile uint32_t standardized_sample_rate;
 	static volatile uint32_t last_packet_time_us;
@@ -93,9 +98,18 @@ private:
 	static volatile uint32_t rate_window_samples;
 	static volatile uint32_t stable_rate_windows;
 	static volatile uint32_t feedback_holdoff_until_us;
+	static volatile uint8_t stream_receive_setting_prev;
+	static volatile uint8_t startup_rate_lock_pending;
+	static volatile uint8_t startup_rate_locked;
+	// Set in ISR on large packet gaps; consumed/reset in process().
+	static volatile uint8_t startup_relock_requested;
+	static volatile uint16_t startup_rate_packet_count;
+	static volatile uint32_t startup_rate_start_us;
+	static volatile uint32_t startup_rate_sample_count;
 	static uint32_t standardizeSampleRate(uint32_t measured_rate);
 	static void resetRateTracking(uint32_t now);
-	static void updateRateTracking(uint32_t sample_frames);
+	static void beginStartupRateLock(uint32_t now);
+	static void updateStartupRateEstimate(uint32_t sample_frames, uint32_t now);
 	static void startFeedbackHoldoff(uint32_t now);
 	static bool isFeedbackHoldoffActive(uint32_t now);
 };

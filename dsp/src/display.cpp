@@ -30,7 +30,8 @@ Display::Display(TwoWire &wire,
                  int &displayMode,
                  float &masterGain,
                  float &volume,
-                 uint16_t &displayChangeBitmap)
+                 uint16_t &displayChangeBitmap,
+                 const uint8_t &uiMode)
     : wire(wire),
       filter(filter),
       filterSettings(filterSettings),
@@ -38,7 +39,8 @@ Display::Display(TwoWire &wire,
       displayMode(displayMode),
       masterGain(masterGain),
       volume(volume),
-      displayChangeBitmap(displayChangeBitmap)
+      displayChangeBitmap(displayChangeBitmap),
+      uiMode(uiMode)
 {
 }
 
@@ -75,164 +77,90 @@ void Display::updateSampleRate()
 
 void Display::updateDisplay()
 {
-  static bool fullSyncDone = false;
   uint16_t changed = displayChangeBitmap;
   if (changed == 0)
   {
     return;
   }
 
-  Serial.println("Updating display with changed filter settings...");
-
-  uint16_t before = changed;
-  const uint16_t perFilterMask = DISPLAY_CHANGE_FILTER_SELECT |
-                                 DISPLAY_CHANGE_FILTER_TYPE |
-                                 DISPLAY_CHANGE_FILTER_FREQ |
-                                 DISPLAY_CHANGE_FILTER_Q |
-                                 DISPLAY_CHANGE_FILTER_GAIN |
-                                 DISPLAY_CHANGE_FILTER_COEFFS;
-
-  if (!fullSyncDone && (changed & DISPLAY_CHANGE_FULL_FILTER_SYNC))
+  // Full sync: send all bands to display
+  if (changed & DISPLAY_CHANGE_FULL_FILTER_SYNC)
   {
-    bool fullSyncOk = true;
     for (int band = 0; band < FILTER_BANDS; band++)
     {
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_SELECT, htonl(band));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_TYPE, htonl(filterSettings[band].type));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_FREQ, htonf(filterSettings[band].frequency));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_Q, htonf(filterSettings[band].Q));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_GAIN, htonf(filterSettings[band].gain));
+      updateDisplayRegister(REG_FILTER_SELECT, htonl(band));
+      updateDisplayRegister(REG_FILTER_TYPE, htonl(filterSettings[band].type));
+      updateDisplayRegister(REG_FILTER_FREQ, htonf(filterSettings[band].frequency));
+      updateDisplayRegister(REG_FILTER_Q, htonf(filterSettings[band].Q));
+      updateDisplayRegister(REG_FILTER_GAIN, htonf(filterSettings[band].gain));
 
       const sample_t *coeffs = filter.getCoefficients(band);
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_COEFF0, htonf(coeffs[0]));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_COEFF1, htonf(coeffs[1]));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_COEFF2, htonf(coeffs[2]));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_COEFF3, htonf(-coeffs[3]));
-      fullSyncOk = fullSyncOk && updateDisplayRegister(REG_FILTER_COEFF4, htonf(-coeffs[4]));
-
-      if (!fullSyncOk)
-      {
-        break;
-      }
+      updateDisplayRegister(REG_FILTER_COEFF0, htonf(coeffs[0]));
+      updateDisplayRegister(REG_FILTER_COEFF1, htonf(coeffs[1]));
+      updateDisplayRegister(REG_FILTER_COEFF2, htonf(coeffs[2]));
+      updateDisplayRegister(REG_FILTER_COEFF3, htonf(-coeffs[3]));
+      updateDisplayRegister(REG_FILTER_COEFF4, htonf(-coeffs[4]));
     }
-
-    if (fullSyncOk)
-    {
-      fullSyncDone = true;
-      changed &= ~DISPLAY_CHANGE_FULL_FILTER_SYNC;
-      changed &= ~perFilterMask;
-      if (updateDisplayRegister(REG_FILTER_SELECT, htonl(selectedFilterBand)))
-      {
-        changed &= ~DISPLAY_CHANGE_FILTER_SELECT;
-      }
-      else
-      {
-        changed |= DISPLAY_CHANGE_FILTER_SELECT;
-      }
-    }
-    else
-    {
-      displayChangeBitmap = changed;
-      Serial.printf("Display update deferred, pending bitmap: 0x%04X\n", changed);
-      return;
-    }
-  }
-  else if (changed & DISPLAY_CHANGE_FULL_FILTER_SYNC)
-  {
-    // Full sync already done this session, skip it and clear the flag
-    changed &= ~DISPLAY_CHANGE_FULL_FILTER_SYNC;
+    updateDisplayRegister(REG_FILTER_SELECT, htonl(selectedFilterBand));
   }
 
+  // Incremental updates for selected band
   if (changed & DISPLAY_CHANGE_FILTER_SELECT)
   {
-    if (updateDisplayRegister(REG_FILTER_SELECT, htonl(selectedFilterBand)))
-    {
-      changed &= ~DISPLAY_CHANGE_FILTER_SELECT;
-    }
+    updateDisplayRegister(REG_FILTER_SELECT, htonl(selectedFilterBand));
   }
 
   if (changed & DISPLAY_CHANGE_DISPLAY_MODE)
   {
-    if (updateDisplayRegister(REG_DISPLAY_MODE, htonl(displayMode)))
-    {
-      changed &= ~DISPLAY_CHANGE_DISPLAY_MODE;
-    }
+    updateDisplayRegister(REG_DISPLAY_MODE, htonl(displayMode));
   }
 
   if (changed & DISPLAY_CHANGE_FILTER_TYPE)
   {
-    if (updateDisplayRegister(REG_FILTER_TYPE, htonl(filterSettings[selectedFilterBand].type)))
-    {
-      changed &= ~DISPLAY_CHANGE_FILTER_TYPE;
-    }
+    updateDisplayRegister(REG_FILTER_TYPE, htonl(filterSettings[selectedFilterBand].type));
   }
 
   if (changed & DISPLAY_CHANGE_FILTER_COEFFS)
   {
     const sample_t *coeffs = filter.getCoefficients(selectedFilterBand);
-    bool coeffsOk = true;
-    coeffsOk = coeffsOk && updateDisplayRegister(REG_FILTER_COEFF0, htonf(coeffs[0]));
-    coeffsOk = coeffsOk && updateDisplayRegister(REG_FILTER_COEFF1, htonf(coeffs[1]));
-    coeffsOk = coeffsOk && updateDisplayRegister(REG_FILTER_COEFF2, htonf(coeffs[2]));
-    coeffsOk = coeffsOk && updateDisplayRegister(REG_FILTER_COEFF3, htonf(-coeffs[3]));
-    coeffsOk = coeffsOk && updateDisplayRegister(REG_FILTER_COEFF4, htonf(-coeffs[4]));
-
-    if (coeffsOk)
-    {
-      changed &= ~DISPLAY_CHANGE_FILTER_COEFFS;
-    }
+    updateDisplayRegister(REG_FILTER_COEFF0, htonf(coeffs[0]));
+    updateDisplayRegister(REG_FILTER_COEFF1, htonf(coeffs[1]));
+    updateDisplayRegister(REG_FILTER_COEFF2, htonf(coeffs[2]));
+    updateDisplayRegister(REG_FILTER_COEFF3, htonf(-coeffs[3]));
+    updateDisplayRegister(REG_FILTER_COEFF4, htonf(-coeffs[4]));
   }
 
   if (changed & DISPLAY_CHANGE_FILTER_FREQ)
   {
-    if (updateDisplayRegister(REG_FILTER_FREQ, htonf(filterSettings[selectedFilterBand].frequency)))
-    {
-      changed &= ~DISPLAY_CHANGE_FILTER_FREQ;
-    }
+    updateDisplayRegister(REG_FILTER_FREQ, htonf(filterSettings[selectedFilterBand].frequency));
   }
 
   if (changed & DISPLAY_CHANGE_FILTER_Q)
   {
-    if (updateDisplayRegister(REG_FILTER_Q, htonf(filterSettings[selectedFilterBand].Q)))
-    {
-      changed &= ~DISPLAY_CHANGE_FILTER_Q;
-    }
+    updateDisplayRegister(REG_FILTER_Q, htonf(filterSettings[selectedFilterBand].Q));
   }
 
   if (changed & DISPLAY_CHANGE_FILTER_GAIN)
   {
-    if (updateDisplayRegister(REG_FILTER_GAIN, htonf(filterSettings[selectedFilterBand].gain)))
-    {
-      changed &= ~DISPLAY_CHANGE_FILTER_GAIN;
-    }
+    updateDisplayRegister(REG_FILTER_GAIN, htonf(filterSettings[selectedFilterBand].gain));
   }
 
   if (changed & DISPLAY_CHANGE_IN_GAIN)
   {
-    if (updateDisplayRegister(REG_IN_GAIN, htonf(masterGain)))
-    {
-      changed &= ~DISPLAY_CHANGE_IN_GAIN;
-    }
+    updateDisplayRegister(REG_IN_GAIN, htonf(masterGain));
   }
 
   if (changed & DISPLAY_CHANGE_OUT_GAIN)
   {
-    if (updateDisplayRegister(REG_OUT_GAIN, htonf(volume)))
-    {
-      changed &= ~DISPLAY_CHANGE_OUT_GAIN;
-    }
+    updateDisplayRegister(REG_OUT_GAIN, htonf(volume));
   }
 
-  if (changed == 0)
+  if (changed & DISPLAY_CHANGE_UI_MODE)
   {
-    updateSampleRate();
-    Serial.printf("Display change bitmap: 0x%04X\n", before);
-    commit();
-    displayChangeBitmap = 0;
-    Serial.println("Display update complete.");
-    return;
+    updateDisplayRegister(REG_UI_MODE, htonl(static_cast<uint32_t>(uiMode)));
   }
 
-  displayChangeBitmap = changed;
-  Serial.printf("Display update deferred, pending bitmap: 0x%04X\n", changed);
+  // Send sample rate and commit
+  updateSampleRate();
+  displayChangeBitmap = 0;
 }

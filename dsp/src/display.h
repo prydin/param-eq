@@ -40,6 +40,7 @@ public:
   static constexpr uint16_t DISPLAY_CHANGE_OUT_GAIN = 1u << 7;
   static constexpr uint16_t DISPLAY_CHANGE_FILTER_COEFFS = 1u << 8;
   static constexpr uint16_t DISPLAY_CHANGE_FULL_FILTER_SYNC = 1u << 9;
+  static constexpr uint16_t DISPLAY_CHANGE_UI_MODE = 1u << 10;
   static constexpr uint16_t DISPLAY_CHANGE_ALL = DISPLAY_CHANGE_FILTER_SELECT |
                                                  DISPLAY_CHANGE_DISPLAY_MODE |
                                                  DISPLAY_CHANGE_FILTER_TYPE |
@@ -48,7 +49,8 @@ public:
                                                  DISPLAY_CHANGE_FILTER_GAIN |
                                                  DISPLAY_CHANGE_IN_GAIN |
                                                  DISPLAY_CHANGE_OUT_GAIN |
-                                                 DISPLAY_CHANGE_FILTER_COEFFS;
+                                                 DISPLAY_CHANGE_FILTER_COEFFS |
+                                                 DISPLAY_CHANGE_UI_MODE;
 
   Display(TwoWire &wire,
           AudioFilterBiquadFloat &filter,
@@ -57,7 +59,8 @@ public:
           int &displayMode,
           float &masterGain,
           float &volume,
-          uint16_t &displayChangeBitmap);
+          uint16_t &displayChangeBitmap,
+          const uint8_t &uiMode);
 
   bool updateDisplayRegister(uint8_t reg, uint32_t value);
   void updateDisplay();
@@ -76,4 +79,5 @@ private:
   float &masterGain;
   float &volume;
   uint16_t &displayChangeBitmap;
+  const uint8_t &uiMode;
 };

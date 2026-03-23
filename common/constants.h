@@ -21,7 +21,7 @@
 #define REG_FILTER_COEFF3 0x0b
 #define REG_FILTER_COEFF4 0x0c
 #define REG_DISPLAY_MODE 0x0d
-#define REG_RESERVED2 0x0e
+#define REG_UI_MODE 0x0e
 #define REG_FILTER_Q 0x0f
 #define REG_FILTER_GAIN 0x10
 #define REG_COMMIT 0xff

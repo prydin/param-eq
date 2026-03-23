@@ -20,11 +20,11 @@
 // SOFTWARE.
 
 #include <string.h>
-#include <avr/pgmspace.h>
 #include "usb_dev.h"
 #include "audio_usb.h"
-#include "debug/printf.h"
 #include <Arduino.h>
+
+#define printf(...) Serial.printf(__VA_ARGS__)
 
 #ifdef AUDIO_INTERFACE
 
@@ -39,12 +39,26 @@ volatile uint32_t AudioInputUSBEx::rate_window_start_us = 0;
 volatile uint32_t AudioInputUSBEx::rate_window_samples = 0;
 volatile uint32_t AudioInputUSBEx::stable_rate_windows = 0;
 volatile uint32_t AudioInputUSBEx::feedback_holdoff_until_us = 0;
+volatile uint8_t AudioInputUSBEx::stream_receive_setting_prev = 0;
+volatile uint8_t AudioInputUSBEx::startup_rate_lock_pending = 0;
+volatile uint8_t AudioInputUSBEx::startup_rate_locked = 0;
+volatile uint8_t AudioInputUSBEx::startup_relock_requested = 0;
+volatile uint16_t AudioInputUSBEx::startup_rate_packet_count = 0;
+volatile uint32_t AudioInputUSBEx::startup_rate_start_us = 0;
+volatile uint32_t AudioInputUSBEx::startup_rate_sample_count = 0;
 
 struct usb_audio_features_struct AudioInputUSBEx::features = {0,0,FEATURE_MAX_VOLUME/2};
 
 extern volatile uint8_t usb_high_speed;
-static void rx_event(transfer_t *t);
-static void tx_event(transfer_t *t);
+
+namespace {
+class USBCallbacks {
+public:
+	static void rx_event(transfer_t *t);
+	static void sync_event(transfer_t *t);
+	static void tx_event(transfer_t *t);
+};
+} // namespace
 
 /*static*/ transfer_t rx_transfer __attribute__ ((used, aligned(32)));
 /*static*/ transfer_t sync_transfer __attribute__ ((used, aligned(32)));
@@ -73,6 +87,10 @@ static const uint32_t USB_RATE_WINDOW_US = 50000;
 static const uint32_t USB_RATE_TIMEOUT_US = 1000000;
 static const uint32_t USB_RATE_STABLE_WINDOWS = 6;
 static const uint32_t USB_FEEDBACK_HOLDOFF_US = 1000000;
+static const uint16_t USB_STARTUP_RATE_PACKET_TARGET = 8;
+static const uint32_t USB_STARTUP_RATE_MIN_WINDOW_US = 3000;
+// If packet cadence disappears for this long, treat it as stream break/restart.
+static const uint32_t USB_RELOCK_GAP_US = 20000;
 
 uint32_t AudioInputUSBEx::standardizeSampleRate(uint32_t measured_rate)
 {
@@ -95,6 +113,18 @@ void AudioInputUSBEx::resetRateTracking(uint32_t now)
 	stable_rate_windows = 0;
 }
 
+void AudioInputUSBEx::beginStartupRateLock(uint32_t now)
+{
+	startup_rate_lock_pending = 1;
+	startup_rate_locked = 0;
+	startup_rate_packet_count = 0;
+	startup_rate_start_us = now;
+	startup_rate_sample_count = 0;
+	stable_rate_windows = 0;
+	resetRateTracking(now);
+	startFeedbackHoldoff(now);
+}
+
 void AudioInputUSBEx::startFeedbackHoldoff(uint32_t now)
 {
 	feedback_holdoff_until_us = now + USB_FEEDBACK_HOLDOFF_US;
@@ -106,43 +136,35 @@ bool AudioInputUSBEx::isFeedbackHoldoffActive(uint32_t now)
 	return holdoff_until != 0 && (int32_t)(holdoff_until - now) > 0;
 }
 
-void AudioInputUSBEx::updateRateTracking(uint32_t sample_frames)
+void AudioInputUSBEx::updateStartupRateEstimate(uint32_t sample_frames, uint32_t now)
 {
-	uint32_t now = micros();
-	uint32_t last = last_packet_time_us;
-
-	if (last == 0 || (now - last) > USB_RATE_TIMEOUT_US) {
-		resetRateTracking(now);
-		startFeedbackHoldoff(now);
-	}
-	last_packet_time_us = now;
-	if (rate_window_start_us == 0) {
-		rate_window_start_us = now;
-	}
-	rate_window_samples += sample_frames;
-
-	uint32_t elapsed = now - rate_window_start_us;
-	if (elapsed < USB_RATE_WINDOW_US) {
+	if (!startup_rate_lock_pending) {
 		return;
 	}
 
-	uint32_t measured_rate = (uint32_t)(((uint64_t)rate_window_samples * 1000000ULL) / elapsed);
-	uint32_t standardized_rate = standardizeSampleRate(measured_rate);
-	if (standardized_rate == standardized_sample_rate) {
-		if (stable_rate_windows < USB_RATE_STABLE_WINDOWS) {
-			stable_rate_windows++;
-		}
-	} else {
-		stable_rate_windows = 1;
+	uint32_t last = last_packet_time_us;
+	if (last == 0 || (now - last) > USB_RATE_TIMEOUT_US) {
+		beginStartupRateLock(now);
 	}
+	last_packet_time_us = now;
+	startup_rate_packet_count++;
+	startup_rate_sample_count += sample_frames;
+
+	uint32_t elapsed = now - startup_rate_start_us;
+	if (startup_rate_packet_count < USB_STARTUP_RATE_PACKET_TARGET || elapsed < USB_STARTUP_RATE_MIN_WINDOW_US) {
+		return;
+	}
+
+	uint32_t measured_rate = (uint32_t)(((uint64_t)startup_rate_sample_count * 1000000ULL) / elapsed);
+	uint32_t standardized_rate = standardizeSampleRate(measured_rate);
 	measured_sample_rate = measured_rate;
 	standardized_sample_rate = standardized_rate;
-	rate_window_start_us = now;
-	rate_window_samples = 0;
+	stable_rate_windows = USB_RATE_STABLE_WINDOWS;
+	startup_rate_lock_pending = 0;
+	startup_rate_locked = 1;
 }
 
-
-static void rx_event(transfer_t *t)
+void USBCallbacks::rx_event(transfer_t *t)
 {	
 	if (t) {
 		int len = AUDIO_RX_SIZE - ((rx_transfer.status >> 16) & 0x7FFF);
@@ -153,7 +175,7 @@ static void rx_event(transfer_t *t)
 	usb_receive(AUDIO_RX_ENDPOINT, &rx_transfer);
 }
 
-static void sync_event(transfer_t *t)
+void USBCallbacks::sync_event(transfer_t *t)
 {
 	// USB 2.0 Specification, 5.12.4.2 Feedback, pages 73-75
 	//printf("sync %x\n", sync_transfer.status); // too slow, can't print this much
@@ -178,18 +200,19 @@ void usb_audio_configure(void)
 		usb_audio_sync_rshift = 10;
 	}
 	memset(&rx_transfer, 0, sizeof(rx_transfer));
-	usb_config_rx_iso(AUDIO_RX_ENDPOINT, AUDIO_RX_SIZE, 1, rx_event);
-	rx_event(NULL);
+	usb_config_rx_iso(AUDIO_RX_ENDPOINT, AUDIO_RX_SIZE, 1, USBCallbacks::rx_event);
+	USBCallbacks::rx_event(NULL);
 	memset(&sync_transfer, 0, sizeof(sync_transfer));
-	usb_config_tx_iso(AUDIO_SYNC_ENDPOINT, usb_audio_sync_nbytes, 1, sync_event);
-	sync_event(NULL);
+	usb_config_tx_iso(AUDIO_SYNC_ENDPOINT, usb_audio_sync_nbytes, 1, USBCallbacks::sync_event);
+	USBCallbacks::sync_event(NULL);
 	memset(&tx_transfer, 0, sizeof(tx_transfer));
-	usb_config_tx_iso(AUDIO_TX_ENDPOINT, AUDIO_TX_SIZE, 1, tx_event);
-	tx_event(NULL);
+	usb_config_tx_iso(AUDIO_TX_ENDPOINT, AUDIO_TX_SIZE, 1, USBCallbacks::tx_event);
+	USBCallbacks::tx_event(NULL);
 }
 
 void AudioInputUSBEx::begin(void)
 {
+	// Called from sketch setup context. Keep this path non-ISR and idempotent.
 	if (rx_fifo == NULL) {
 		rx_fifo = new AudioBufferFifo(AUDIO_USB_RX_FIFO_SIZE);
 	}
@@ -210,12 +233,13 @@ void AudioInputUSBEx::begin(void)
 	rate_window_samples = 0;
 	stable_rate_windows = 0;
 	feedback_holdoff_until_us = 0;
-	// update_responsibility = update_setup();
-	// TODO: update responsibility is tough, partly because the USB
-	// interrupts aren't sychronous to the audio library block size,
-	// but also because the PC may stop transmitting data, which
-	// means we no longer get receive callbacks from usb.c
-	// update_responsibility = false;
+	stream_receive_setting_prev = 0;
+	startup_rate_lock_pending = 0;
+	startup_rate_locked = 0;
+	startup_relock_requested = 0;
+	startup_rate_packet_count = 0;
+	startup_rate_start_us = 0;
+	startup_rate_sample_count = 0;
 }
 
 AudioBuffer *AudioInputUSBEx::getNextBlock(void)
@@ -242,7 +266,7 @@ bool AudioInputUSBEx::isSampleRateStable()
 		return false;
 	}
 	uint32_t age = micros() - last;
-	return usb_audio_receive_setting != 0 && age < USB_RATE_TIMEOUT_US && stable_rate_windows >= USB_RATE_STABLE_WINDOWS;
+	return usb_audio_receive_setting != 0 && startup_rate_locked != 0 && age < USB_RATE_TIMEOUT_US;
 }
 
 uint32_t AudioInputUSBEx::getLastPacketAgeMicros()
@@ -276,10 +300,8 @@ static void copy_to_buffer(const uint8_t *src, AudioBuffer *buffer, unsigned int
 	}
 }
 
-// Called from the USB interrupt when an isochronous packet arrives
-// we must completely remove it from the receive buffer before returning
-//
-#if 1
+// USB ISR callback: convert incoming USB samples into AudioBuffer blocks,
+// then queue blocks to rx_fifo. Keep this path short and allocation-aware.
 void usb_audio_receive_callback(unsigned int len)
 {
 	unsigned int count, avail;
@@ -289,7 +311,19 @@ void usb_audio_receive_callback(unsigned int len)
 
 	AudioInputUSBEx::receive_flag = 1;
 	len /= 6; // 1 stereo sample = 6 bytes (2 channels × 3 bytes)
-	AudioInputUSBEx::updateRateTracking(len);
+	uint32_t now = micros();
+	uint32_t last = AudioInputUSBEx::last_packet_time_us;
+	if (usb_audio_receive_setting != 0) {
+		if (last != 0 && (now - last) > USB_RELOCK_GAP_US) {
+			AudioInputUSBEx::startup_relock_requested = 1;
+			AudioInputUSBEx::startup_rate_locked = 0;
+		}
+		if (!AudioInputUSBEx::startup_rate_lock_pending && !AudioInputUSBEx::startup_rate_locked) {
+			AudioInputUSBEx::beginStartupRateLock(now);
+		}
+		AudioInputUSBEx::updateStartupRateEstimate(len, now);
+	}
+	AudioInputUSBEx::last_packet_time_us = now;
 	data = (const uint8_t *)rx_buffer;
 
 	count = AudioInputUSBEx::incoming_count;
@@ -352,39 +386,95 @@ void usb_audio_receive_callback(unsigned int len)
 	}
 	AudioInputUSBEx::incoming_count = count;
 }
-#endif
 
 void AudioInputUSBEx::process(AudioBuffer *block)
 {
 	AudioBuffer *buffer;
+	uint8_t receive_setting;
+	bool startup_lock_pending;
+	uint32_t now;
+	uint8_t prev_setting;
+	uint8_t relock_requested;
+	uint16_t fifo_level;
 
+	(void)block;
+
+	now = micros();
+
+	// Critical section: synchronize state shared with USB ISR.
 	__disable_irq();
-	buffer = getNextBlock();
-	uint16_t c = incoming_count;
+	receive_setting = usb_audio_receive_setting;
+	prev_setting = stream_receive_setting_prev;
+	if (receive_setting != prev_setting) {
+		stream_receive_setting_prev = receive_setting;
+		if (receive_setting == 0) {
+			if (rx_fifo != NULL) {
+				rx_fifo->clear();
+			}
+			if (incoming_buffer != NULL) {
+				incoming_buffer->release();
+				incoming_buffer = NULL;
+			}
+			incoming_count = 0;
+			receive_flag = 0;
+			startup_rate_lock_pending = 0;
+			startup_rate_locked = 0;
+			startup_relock_requested = 0;
+			startup_rate_packet_count = 0;
+			startup_rate_start_us = 0;
+			startup_rate_sample_count = 0;
+			stable_rate_windows = 0;
+			last_packet_time_us = 0;
+			rate_window_start_us = 0;
+			rate_window_samples = 0;
+		} else {
+			if (rx_fifo != NULL) {
+				rx_fifo->clear();
+			}
+			if (incoming_buffer != NULL) {
+				incoming_buffer->release();
+				incoming_buffer = NULL;
+			}
+			incoming_count = 0;
+			receive_flag = 0;
+			beginStartupRateLock(now);
+		}
+	}
+
+	relock_requested = startup_relock_requested;
+	if (relock_requested && receive_setting != 0) {
+		startup_relock_requested = 0;
+		if (rx_fifo != NULL) {
+			rx_fifo->clear();
+		}
+		if (incoming_buffer != NULL) {
+			incoming_buffer->release();
+			incoming_buffer = NULL;
+		}
+		incoming_count = 0;
+		receive_flag = 0;
+		beginStartupRateLock(now);
+	}
+
+	// During startup lock we intentionally gate audio forwarding to avoid
+	// running DSP with unstable sample-rate estimates.
+	startup_lock_pending = startup_rate_lock_pending != 0;
+	buffer = startup_lock_pending ? NULL : getNextBlock();
+	fifo_level = (rx_fifo != NULL) ? (uint16_t)rx_fifo->size() : 0;
 	uint8_t f = receive_flag;
-	uint32_t now = micros();
 	bool feedback_holdoff = isFeedbackHoldoffActive(now);
 	receive_flag = 0;
 	__enable_irq();
 	if (f && !feedback_holdoff) {
-		int diff = AUDIO_BLOCK_SAMPLES/2 - (int)c;
-		feedback_accumulator += diff * 1;
-		//uint32_t feedback = (feedback_accumulator >> 8) + diff * 100;
-		//usb_audio_sync_feedback = feedback;
-
-		//printf(diff >= 0 ? "." : "^");
+		// Drive feedback to keep the RX FIFO half full, providing headroom
+		// against both underruns and overruns. Each block off from the
+		// target contributes one unit of adjustment - same magnitude as
+		// the previous approach but measuring real buffering depth.
+		int32_t fifo_diff = (int32_t)(AUDIO_USB_RX_FIFO_SIZE / 2) - (int32_t)fifo_level;
+		feedback_accumulator += fifo_diff;
 	}
-	//serial_phex(c);
-	//serial_print(".");  
 	if (!buffer) {
-		//printf("#"); // buffer underrun - PC sending too slow
-		if (f && !feedback_holdoff)
-		{
-			feedback_accumulator += 3500;
-			usb_audio_underrun_count++;
-		}
-		else if (f)
-		{
+		if (f) {
 			usb_audio_underrun_count++;
 		}
 	}
@@ -392,34 +482,33 @@ void AudioInputUSBEx::process(AudioBuffer *block)
 		transmit(buffer);
 		release(buffer);
 	}
+
+#if defined(PRINT_DEBUG_STUFF)
+	{
+		static uint32_t next_fifo_print_ms = 0;
+		uint32_t now_ms = millis();
+		if (now_ms >= next_fifo_print_ms) {
+			next_fifo_print_ms = now_ms + 1000;
+			printf(
+				"USB RX FIFO: level=%u/%u  feedback_acc=%lu  underruns=%lu  overruns=%lu\n",
+				(unsigned)fifo_level,
+				(unsigned)AUDIO_USB_RX_FIFO_SIZE,
+				(unsigned long)feedback_accumulator,
+				(unsigned long)usb_audio_underrun_count,
+				(unsigned long)usb_audio_overrun_count);
+		}
+	}
+#endif
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if 1
-// bool AudioOutputUSBEx::update_responsibility;
 AudioBufferFifo * AudioOutputUSBEx::tx_fifo;
 AudioBuffer * AudioOutputUSBEx::active_buffer;
 uint16_t AudioOutputUSBEx::active_offset;
 
-/*DMAMEM*/ uint16_t usb_audio_transmit_buffer[AUDIO_TX_SIZE/2] __attribute__ ((used, aligned(32)));
+uint16_t usb_audio_transmit_buffer[AUDIO_TX_SIZE/2] __attribute__ ((used, aligned(32)));
 
 
-static void tx_event(transfer_t *t)
+void USBCallbacks::tx_event(transfer_t *t)
 {
 	int len = usb_audio_transmit_callback();
 	usb_audio_sync_feedback = feedback_accumulator >> usb_audio_sync_rshift;
@@ -431,7 +520,6 @@ static void tx_event(transfer_t *t)
 
 void AudioOutputUSBEx::begin(void)
 {
-	// update_responsibility = false;
 	if (tx_fifo == NULL) {
 		tx_fifo = new AudioBufferFifo(AUDIO_USB_TX_FIFO_SIZE);
 	}
@@ -525,7 +613,9 @@ unsigned int usb_audio_transmit_callback(void)
 	uint32_t avail, num, target, offset, len=0;
 	AudioBuffer *buffer = NULL;
 
-	if (++count < 10) {   // TODO: dynamic adjust to match USB rate
+	// UAC1 full-speed uses an integer packet cadence pattern (44/45 samples)
+	// to approximate 44.1k. Keep this deterministic to avoid drift.
+	if (++count < 10) {
 		target = 44;
 	} else {
 		count = 0;
@@ -566,7 +656,6 @@ unsigned int usb_audio_transmit_callback(void)
 	}
 	return target * 6;
 }
-#endif
 
 
 
