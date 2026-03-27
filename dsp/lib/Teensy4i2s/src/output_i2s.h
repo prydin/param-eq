@@ -37,12 +37,16 @@ public:
 	static bool Enabled;
 	AudioOutputI2S(void) { }
 	virtual void begin(void);
+	void setSampleRate(uint32_t sampleRate);
+	uint32_t getSampleRate(void) const { return sampleRateHz; }
 	friend class AudioInputI2S;
 
 protected:
 	static void config_i2s(bool only_bclk = false);
+	static void applyClockConfig(uint32_t sampleRate, bool force = false);
 	static bool isConfigured;
 	static DMAChannel dma;
+	static uint32_t sampleRateHz;
 	static void isr(void);
 };
 

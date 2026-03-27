@@ -20,8 +20,8 @@
 // SOFTWARE.
 #ifndef AUDIO_COMPONENT_H
 #define AUDIO_COMPONENT_H
-#include <Teensy4i2s.h>
 #include <stdlib.h>
+#include <vector>
 #include "audio_buffer.h"
 
 #define AUDIO_CHANNELS 2

@@ -19,7 +19,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "audio_gain.h"
-#include <Teensy4i2s.h>
 
 AudioGain::AudioGain() : gain(1.0f) {
     // Default to unity gain (no change)

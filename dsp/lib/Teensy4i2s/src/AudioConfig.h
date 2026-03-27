@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define SAMPLERATE 48000
+#define SAMPLERATE 44100 // TODO: implement sample rate changes and make this dynamic
 #define BIT_DEPTH 24
 #define AUDIO_BLOCK_SAMPLES 64
 

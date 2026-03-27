@@ -32,29 +32,3 @@
 #include "control_TLV320AIC3204.h"
 #include "input_i2s.h"
 #include "output_i2s.h"
-
-extern AudioOutputI2S *audioOutputI2S;
-extern AudioInputI2S *audioInputI2S;
-
-inline void AudioDisable() { AudioOutputI2S::Enabled = false; }
-inline void AudioEnable() { AudioOutputI2S::Enabled = true; }
-
-inline void InitI2s(bool slaveMode = false)
-{
-    if (slaveMode)
-    {
-        static AudioOutputI2Sslave outputSlave;
-        static AudioInputI2Sslave inputSlave;
-        audioOutputI2S = &outputSlave;
-        audioInputI2S = &inputSlave;
-    }
-    else
-    {
-        static AudioOutputI2S outputMaster;
-        static AudioInputI2S inputMaster;
-        audioOutputI2S = &outputMaster;
-        audioInputI2S = &inputMaster;
-    }
-    audioOutputI2S->begin();
-    audioInputI2S->begin();
-}
