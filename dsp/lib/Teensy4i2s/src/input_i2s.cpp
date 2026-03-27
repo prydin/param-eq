@@ -141,7 +141,8 @@ void AudioInputI2Sslave::begin(void)
 	CORE_PIN8_CONFIG  = 3;  //1:RX_DATA0
 	IOMUXC_SAI1_RX_DATA0_SELECT_INPUT = 2;
 
-	dma.TCD->SADDR = (void *)((uint32_t)&I2S1_RDR0 + 2);
+	// 32-bit DMA reads must use aligned RDR0 address.
+	dma.TCD->SADDR = (void *)((uint32_t)&I2S1_RDR0 + 0);
 	dma.TCD->SOFF = 0;
 	dma.TCD->ATTR = DMA_TCD_ATTR_SSIZE(2) | DMA_TCD_ATTR_DSIZE(2);
 	dma.TCD->NBYTES_MLNO = 4;

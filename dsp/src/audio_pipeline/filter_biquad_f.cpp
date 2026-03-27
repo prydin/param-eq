@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include <Arduino.h>
+#include <string.h>
 #include "filter_biquad_f.h"
 #include "base.h"
 #include "arm_math.h"
@@ -40,10 +41,12 @@ void AudioFilterBiquadFloat::process(AudioBuffer *block)
     {
         return;
     }
+
     for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
     {
         processChannel(block->data[ch], outputBlock->data[ch], &iir_state[ch]);
     }
+
     transmit(outputBlock);
     release(outputBlock);
 }
@@ -56,20 +59,15 @@ void AudioFilterBiquadFloat::processChannel(sample_t *input, sample_t *output, f
 #else
     arm_biquad_cascade_df2T_f32(iir_inst, input, output, AUDIO_BLOCK_SAMPLES);
 #endif
-    bool clipped = false;
-    // Check for clipping and limit output to [-1.0, 1.0]
-    for (uint32_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-    {
-        if (output[i] >= 1.0f || output[i] <= -1.0f)
-        {
-            clipped = true;
-            break;
-        }
-    }
 }
 
 void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
 {
+    if (stage >= MAX_BIQUAD_STAGES)
+    {
+        return;
+    }
+
     __disable_irq();
     for (int i = 0; i < STAGE_COEFFICIENTS; i++)
     {
@@ -81,6 +79,7 @@ void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
         num_stages = stage + 1;
         for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
         {
+            memset(state[ch], 0, sizeof(state[ch]));
 #ifdef USE_DOUBLE_SAMPLES
             arm_biquad_cascade_df2T_init_f64(&iir_state[ch], num_stages, coeff, state[ch]);
 #else
@@ -96,12 +95,26 @@ void AudioFilterBiquadFloat::setCoefficients(uint32_t stage, const sample_t *c)
 
 void AudioFilterBiquadFloat::setSosCoefficients(uint32_t stages, const sample_t *sos)
 {
+    if (stages > MAX_BIQUAD_STAGES)
+    {
+        stages = MAX_BIQUAD_STAGES;
+    }
+
     __disable_irq();
     for (uint32_t i = 0; i < stages * STAGE_COEFFICIENTS; i++)
     {
         coeff[i] = sos[i];
     }
     num_stages = stages;
+    for (int ch = 0; ch < AUDIO_CHANNELS; ch++)
+    {
+        memset(state[ch], 0, sizeof(state[ch]));
+#ifdef USE_DOUBLE_SAMPLES
+        arm_biquad_cascade_df2T_init_f64(&iir_state[ch], num_stages, coeff, state[ch]);
+#else
+        arm_biquad_cascade_df2T_init_f32(&iir_state[ch], num_stages, coeff, state[ch]);
+#endif
+    }
     __enable_irq();
 }
 

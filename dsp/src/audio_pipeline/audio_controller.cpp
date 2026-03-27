@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include <Arduino.h>
+#include <math.h>
 #include "audio_controller.h"
 #include "netconv.h"
 
@@ -37,6 +38,7 @@ void AudioController::process(AudioBuffer* block) {
     // This is the final destination - convert samples to int32 for output
     static bool wasClipped = false;
     bool clipped = false;
+    processCount++;
     for(int ch = 0; ch < AUDIO_CHANNELS; ch++) {
         for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
             sample_t sample  = block->data[ch][i];
@@ -59,15 +61,30 @@ void AudioController::process(AudioBuffer* block) {
 void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
 {
     // Running the audio chain with unstable sample rate can cause weird behavior.
-    if(!getInstance()->enabled || !isSampleRateStable()) {
+    if(!getInstance()->enabled || !isSampleRateStable() || inputs == nullptr) {
+        for(int ch = 0; ch < AUDIO_CHANNELS; ch++) {
+            for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+                outputs[ch][i] = 0;
+            }
+        }
         return;
     }
     AudioBuffer* buffer = AudioBufferPool::getInstance().getBuffer();
+    if (buffer == nullptr)
+    {
+        for(int ch = 0; ch < AUDIO_CHANNELS; ch++) {
+            for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+                outputs[ch][i] = 0;
+            }
+        }
+        return;
+    }
     
     // Convert inputs from int32 to float
     for(int ch = 0; ch < AUDIO_CHANNELS; ch++) {
         for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-            buffer->data[ch][i] = ((sample_t)inputs[ch][i]) / 2147483648.0f;
+            sample_t v = ((sample_t)inputs[ch][i]) / 2147483648.0f;
+            buffer->data[ch][i] = v;
         }
     }
     
@@ -79,7 +96,7 @@ void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
         for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
             outputs[ch][i] = getInstance()->outputs[ch][i];
         }
-    }    
+    }
     getInstance()->release(buffer);
 }
  

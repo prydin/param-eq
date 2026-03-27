@@ -25,7 +25,7 @@
 class AcceleratedEncoder : public RotaryEncoder {
 public:
     AcceleratedEncoder(int pin1, int pin2, LatchMode mode = LatchMode::FOUR3)
-        : RotaryEncoder(pin1, pin2, mode), lastPosition(0), acceleratedPosition(0), minValue(0), maxValue(100) {}
+        : RotaryEncoder(pin1, pin2, mode), minValue(0), maxValue(100), lastPosition(0), acceleratedPosition(0) {}
 
     void setEndpoints(int minPos, int maxPos) {
         minValue = minPos;

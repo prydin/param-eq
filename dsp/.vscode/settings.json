@@ -1,3 +1,6 @@
 {
-    "idf.currentSetup": "C:\\Users\\pontu\\esp\\v5.5.1\\esp-idf"
+    "idf.currentSetup": "C:\\Users\\pontu\\esp\\v5.5.1\\esp-idf",
+    "chat.tools.terminal.autoApprove": {
+        "&": true
+    }
 }

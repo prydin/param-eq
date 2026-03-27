@@ -36,6 +36,8 @@ public:
     
     // Override the audio processing method
     void process(AudioBuffer* block) override;
+
+    float getGain() const { return gain; }
     
 private:
     float gain;  // Linear gain factor

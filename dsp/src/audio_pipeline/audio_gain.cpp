@@ -44,7 +44,9 @@ void AudioGain::process(AudioBuffer* block) {
     }
     for (int channel = 0; channel < AUDIO_CHANNELS; channel++) {
         for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-            outputBlock->data[channel][i] = block->data[channel][i] * gain;
+            float in = block->data[channel][i];
+            float out = in * gain;
+            outputBlock->data[channel][i] = out;
         }
     }
     

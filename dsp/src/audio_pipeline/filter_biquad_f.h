@@ -25,8 +25,9 @@
 #include "base.h"
 #include "arm_math.h"
 #include "audio_component.h"
+#include "../../common/filter.h"
 
-#define MAX_BIQUAD_STAGES 4
+#define MAX_BIQUAD_STAGES FILTER_BANDS
 #define STAGE_COEFFICIENTS 5
 #define NUM_STATES 4
 
@@ -66,7 +67,9 @@ public:
     void setLowShelf(uint32_t stage, double frequency, double sampleRate, double gain, double slope = 1.0f);
     void setHighShelf(uint32_t stage, double frequency, double sampleRate, double gain, double slope = 1.0f);
     void setPeakingEQ(uint32_t stage, double frequency, double sampleRate, double q, double gain);
-    void bypass(uint32_t stage);    
+    void bypass(uint32_t stage);
+
+    uint32_t getNumStages() const { return num_stages; }
 
 private:
     sample_t coeff[STAGE_COEFFICIENTS * MAX_BIQUAD_STAGES];

@@ -57,6 +57,10 @@ public:
         return audioInputI2S ? audioInputI2S->getNumStableIntervals() : 0;
     }
 
+    static uint32_t getProcessCount() {
+        return getInstance()->processCount;
+    }
+
     void enable(bool en) {
         enabled = en;
     }
@@ -66,6 +70,7 @@ private:
     int32_t outputs[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES];
     void (*clipDetector)(bool clipped) = nullptr;
     bool enabled = true;
+    uint32_t processCount = 0;
     static uint32_t sampleRate;
 };
 
