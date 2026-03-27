@@ -16,6 +16,8 @@
 #define BYPASS 3
 #define NUM_FILTER_TYPES 4
 
+#define NUM_DISPLAY_MODES 2
+
 
 // Struct represeting filter settings
 struct FilterSettings {

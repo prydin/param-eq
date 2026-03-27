@@ -60,10 +60,10 @@ void ControlValues::setFilterType(int type)
 
 void ControlValues::setSelectedBand(int band)
 {
-  if(getCurrentFilter().type != band) {
+  if(selectedBand != band) {
     filterChanged = bandChanged = dirty = true;
   }
-  getCurrentFilter().type = band;
+  selectedBand = band;
 }
 
 void ControlValues::setCurrentFilterSettings(FilterSettings settings)
@@ -81,6 +81,18 @@ void ControlValues::setFilterSettings(int band, FilterSettings settings)
     dirty = filterChanged = true;
   }
   filterSettings[band] = settings;
+}
+
+void ControlValues::cycleSelectedBand() {
+  setSelectedBand((getSelectedBand() + 1) % FILTER_BANDS);
+}   
+
+void ControlValues::cycleFilterType() {
+  setFilterType((getFilterType() + 1) % NUM_FILTER_TYPES);
+}   
+
+void ControlValues::cycleDisplayMode() {
+  setDisplayMode((getDisplayMode() + 1) % NUM_DISPLAY_MODES);
 }
 
 void ControlValues::reset()

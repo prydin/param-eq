@@ -27,6 +27,9 @@ public:
   void setDisplayMode(int mode);
   void setFilterType(int type);
   void setSelectedBand(int band);
+  void cycleSelectedBand();
+  void cycleFilterType();
+  void cycleDisplayMode();
   void setCurrentFilterSettings(FilterSettings settings);
   void setFilterSettings(int band, FilterSettings settings);
 

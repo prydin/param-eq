@@ -355,27 +355,10 @@ void setup(void)
   pinMode(LED_BUILTIN, OUTPUT);
 
   // Set up pushbuttons
-  filterTypeSelectButton.attachPress([]()
-                                     {
-      int selectedFilterBand = controlValues.getSelectedBand();
-      int type = controlValues.getFilterType();
-      type = (type + 1) % NUM_FILTER_TYPES;
-      controlValues.setFilterType(type);
-      Serial.printf("Selected filter type: %d\n", type); });
-
-  filterSelectButton.attachPress([]()
-                                 {
-    int selectedBand = controlValues.getSelectedBand();
-    selectedBand = (selectedBand + 1) % FILTER_BANDS;
-    controlValues.setSelectedBand(selectedBand);
-    Serial.printf("Selected filter band: %d\n", selectedBand); });
-
-  displayModeButton.attachPress([]()
-                                {
-    int displayMode = controlValues.getDisplayMode();
-    displayMode = (displayMode + 1) % 2;
-    controlValues.setDisplayMode(displayMode);
-    Serial.printf("Selected display mode: %d\n", displayMode); });
+  filterTypeSelectButton.attachPress([]() { controlValues.cycleFilterType(); });
+  filterSelectButton.attachPress([]() { controlValues.cycleSelectedBand(); });
+  displayModeButton.attachPress([]() { controlValues.cycleDisplayMode(); });
+  
 
   // Initialize S2C
   Wire.begin();
