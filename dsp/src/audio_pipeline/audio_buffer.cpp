@@ -19,7 +19,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "audio_buffer.h"
-#include <string.h>
 
 AudioBufferPool::AudioBufferPool(size_t poolSize)
 {
@@ -37,7 +36,7 @@ AudioBuffer *AudioBufferPool::getBuffer()
 {
     if (freeList == nullptr)
     {
-        printf("PANIC: AudioBufferPool: No free buffers available!\n");
+        Serial.println("PANIC: AudioBufferPool: No free buffers available!");
         return nullptr; // No available buffer
     }
     AudioBuffer *buffer = freeList;

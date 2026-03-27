@@ -22,7 +22,6 @@
 #define AUDIO_BUFFER_H
 
 #include <stdlib.h>
-#include <stdio.h>
 #include "base.h"
 
 class AudioBuffer
@@ -71,7 +70,7 @@ inline void AudioBuffer::release()
 {
     if(refCount <= 0)
     {
-        printf("PANIC: AudioBuffer: release() called on buffer with refCount <= 0\n");
+        Serial.println("PANIC: AudioBuffer: release() called on buffer with refCount <= 0");
         return;
     }
     if(--refCount == 0)

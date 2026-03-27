@@ -42,7 +42,6 @@
 DMAChannel AudioOutputI2S::dma(false);
 bool AudioOutputI2S::Enabled;
 bool AudioOutputI2S::isConfigured = false;
-uint32_t AudioOutputI2S::sampleRateHz = SAMPLERATE;
 
 static int32_t dataLA[AUDIO_BLOCK_SAMPLES] = {0};
 static int32_t dataLB[AUDIO_BLOCK_SAMPLES] = {0};
@@ -95,25 +94,6 @@ void AudioOutputI2S::begin()
 	dma.attachInterrupt(isr);
 }
 
-void AudioOutputI2S::setSampleRate(uint32_t sampleRate)
-{
-	Serial.printf("AudioOutputI2S::setSampleRate(%u)\n", sampleRate);
-	if (sampleRate == 0 || sampleRate == sampleRateHz)
-	{
-		return;
-	}
-
-	__disable_irq();
-	uint32_t savedTcsr = I2S1_TCSR;
-	uint32_t savedRcsr = I2S1_RCSR;
-	I2S1_TCSR = 0;
-	I2S1_RCSR = 0;
-	applyClockConfig(sampleRate, true);
-	I2S1_RCSR = savedRcsr;
-	I2S1_TCSR = savedTcsr;
-	__enable_irq();
-}
-
 // This gets called twice per block, when buffer is half full and completely full
 // Every other call, after we've pushed the second half of the current block onto the tx_buffer, we trigger the
 // process() call again, computing a new block of data
@@ -158,7 +138,7 @@ void AudioOutputI2S::isr(void)
 
 	Timers::ResetFrame();
 	// Fetch the input samples
-	//int32_t** dataInPtr = AudioInputI2S::getData();
+	int32_t** dataInPtr = AudioInputI2S::getData();
 	
 	if (!Enabled)
 	{
@@ -172,7 +152,7 @@ void AudioOutputI2S::isr(void)
 	else if (Timers::GetCpuLoad() < 0.98)
 	{
 		// populate the next block - unless CPU is at or above 98%
-		i2sAudioCallback(nullptr, fillBuffers);
+		i2sAudioCallback(dataInPtr, fillBuffers);
 	}
 
 	Timers::LapInner(Timers::TIMER_TOTAL);
@@ -194,7 +174,29 @@ void AudioOutputI2S::config_i2s(bool only_bclk)
 	  return ;
 	}
 
-	applyClockConfig(sampleRateHz);
+	//PLL:
+	int fs = SAMPLERATE;
+	// PLL between 27*24 = 648MHz und 54*24=1296MHz
+	int n1 = 4; //SAI prescaler 4 => (n1*n2) = multiple of 4
+	int n2 = 1 + (24000000 * 27) / (fs * 256 * n1);
+
+	double C = ((double)fs * 256 * n1 * n2) / 24000000;
+	int c0 = C;
+	int c2 = 10000;
+	int c1 = C * c2 - (c0 * c2);
+	set_audioClock(c0, c1, c2);
+
+	// clear SAI1_CLK register locations
+	CCM_CSCMR1 = (CCM_CSCMR1 & ~(CCM_CSCMR1_SAI1_CLK_SEL_MASK))
+		   | CCM_CSCMR1_SAI1_CLK_SEL(2); // &0x03 // (0,1,2): PLL3PFD0, PLL5, PLL4
+	CCM_CS1CDR = (CCM_CS1CDR & ~(CCM_CS1CDR_SAI1_CLK_PRED_MASK | CCM_CS1CDR_SAI1_CLK_PODF_MASK))
+		   | CCM_CS1CDR_SAI1_CLK_PRED(n1-1) // &0x07
+		   | CCM_CS1CDR_SAI1_CLK_PODF(n2-1); // &0x3f
+
+	// Select MCLK
+	IOMUXC_GPR_GPR1 = (IOMUXC_GPR_GPR1
+		& ~(IOMUXC_GPR_GPR1_SAI1_MCLK1_SEL_MASK))
+		| (IOMUXC_GPR_GPR1_SAI1_MCLK_DIR | IOMUXC_GPR_GPR1_SAI1_MCLK1_SEL(0));
 
 	if (!only_bclk)
 	{
@@ -225,36 +227,6 @@ void AudioOutputI2S::config_i2s(bool only_bclk)
 	I2S1_RCR4 = I2S_RCR4_FRSZ((2-1)) | I2S_RCR4_SYWD((32-1)) | I2S_RCR4_MF
 		    | I2S_RCR4_FSE | I2S_RCR4_FSP | I2S_RCR4_FSD;
 	I2S1_RCR5 = I2S_RCR5_WNW((32-1)) | I2S_RCR5_W0W((32-1)) | I2S_RCR5_FBT((32-1));
-	isConfigured = true;
-}
-
-void AudioOutputI2S::applyClockConfig(uint32_t sampleRate, bool force)
-{
-	sampleRateHz = sampleRate;
-
-	//PLL:
-	int fs = sampleRate;
-	// PLL between 27*24 = 648MHz und 54*24=1296MHz
-	int n1 = 4; //SAI prescaler 4 => (n1*n2) = multiple of 4
-	int n2 = 1 + (24000000 * 27) / (fs * 256 * n1);
-
-	double C = ((double)fs * 256 * n1 * n2) / 24000000;
-	int c0 = C;
-	int c2 = 10000;
-	int c1 = C * c2 - (c0 * c2);
-	set_audioClock(c0, c1, c2, force);
-
-	// clear SAI1_CLK register locations
-	CCM_CSCMR1 = (CCM_CSCMR1 & ~(CCM_CSCMR1_SAI1_CLK_SEL_MASK))
-		   | CCM_CSCMR1_SAI1_CLK_SEL(2); // &0x03 // (0,1,2): PLL3PFD0, PLL5, PLL4
-	CCM_CS1CDR = (CCM_CS1CDR & ~(CCM_CS1CDR_SAI1_CLK_PRED_MASK | CCM_CS1CDR_SAI1_CLK_PODF_MASK))
-		   | CCM_CS1CDR_SAI1_CLK_PRED(n1-1) // &0x07
-		   | CCM_CS1CDR_SAI1_CLK_PODF(n2-1); // &0x3f
-
-	// Select MCLK
-	IOMUXC_GPR_GPR1 = (IOMUXC_GPR_GPR1
-		& ~(IOMUXC_GPR_GPR1_SAI1_MCLK1_SEL_MASK))
-		| (IOMUXC_GPR_GPR1_SAI1_MCLK_DIR | IOMUXC_GPR_GPR1_SAI1_MCLK1_SEL(0));
 }
 
 void AudioOutputI2Sslave::begin(void)

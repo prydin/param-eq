@@ -20,12 +20,13 @@
 // SOFTWARE.
 #include "audio_square_wave.h"
 #include "audio_controller.h"
+#include <Teensy4i2s.h>
 
 AudioSquareWave::AudioSquareWave()
     : frequency(440.0f),                           // Default to A4 (440 Hz)
       amplitude(0.5f),                             // Default to half amplitude
       phase(0.0f),                                 // Start at zero phase
-      sampleRate(44100) // Get sample rate from AudioController
+      sampleRate(AudioController::getSampleRate()) // Get sample rate from AudioController
 {
 }
 void AudioSquareWave::setFrequency(float frequencyHz)

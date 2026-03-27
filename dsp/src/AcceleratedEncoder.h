@@ -85,4 +85,4 @@ private:
     int maxValue;
     int lastPosition;
     int acceleratedPosition;
-};
+};  
