@@ -179,15 +179,31 @@ void processI2C(int numBytes)
   // Read register number
   uint8_t registerNumber = Wire.read();
 
+  const int payloadBytes = numBytes - 1;
+  if (payloadBytes != 4)
+  {
+    while (Wire.available())
+    {
+      Wire.read();
+    }
+    return;
+  }
+
   // Read the data
-  uint32_t data;
+  uint32_t data = 0;
   uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
   size_t bytesRead = 0;
-  while (Wire.available() && bytesRead < numBytes)
+  while (Wire.available() && bytesRead < sizeof(data))
   {
     ptr[bytesRead++] = Wire.read();
     // Serial.printf("Read byte: %02x\n", ptr[bytesRead - 1]);
   }
+
+  if (bytesRead != sizeof(data))
+  {
+    return;
+  }
+
   registers.updateRegister(registerNumber, data);
 }
 

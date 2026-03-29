@@ -8,6 +8,7 @@ void unpackFftWord(uint32_t word, uint8_t *dst, uint8_t wordIndex) {
         return;
     }
 
+    // DSP packs groups as b0 in LSB through b3 in MSB before byte-order conversion.
     dst[base + 0U] = static_cast<uint8_t>(word & 0xFFU);
     dst[base + 1U] = static_cast<uint8_t>((word >> 8) & 0xFFU);
     dst[base + 2U] = static_cast<uint8_t>((word >> 16) & 0xFFU);
@@ -17,21 +18,6 @@ void unpackFftWord(uint32_t word, uint8_t *dst, uint8_t wordIndex) {
 
 void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
     RegisterState& w = buffers[writeBufferIndex];
-
-    // Accept both mappings for left FFT words:
-    // - Legacy: 0x11-0x14
-    // - Requested FFT mode map: 0x10-0x13
-    if (reg >= 0x10 && reg <= 0x14) {
-        const uint8_t leftWordIndex = reg - 0x10;
-        w.fftLeftWords[leftWordIndex] = ntohl(value);
-        if (reg == 0x10) {
-            w.fftLeftUsesReg10 = true;
-        }
-    }
-    if (reg >= REG_FFT_DATA_R0 && reg <= REG_FFT_DATA_R3) {
-        const uint8_t rightWordIndex = reg - REG_FFT_DATA_R0;
-        w.fftRightWords[rightWordIndex] = ntohl(value);
-    }
 
     switch (reg) {
         case REG_OUT_GAIN:
@@ -74,6 +60,19 @@ void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
         case REG_FILTER_COEFF4:
             w.filterCoeff[w.filterSelect][reg - REG_FILTER_COEFF0] = ntohf(value);
             break;
+        case REG_FFT_DATA_L0:
+        case REG_FFT_DATA_L1:    
+        case REG_FFT_DATA_L2:
+        case REG_FFT_DATA_L3:
+            unpackFftWord(ntohl(value), w.fftLeft, reg - REG_FFT_DATA_L0);
+            break;
+        case REG_FFT_DATA_R0:
+        case REG_FFT_DATA_R1:
+        case REG_FFT_DATA_R2:
+        case REG_FFT_DATA_R3:
+            unpackFftWord(ntohl(value), w.fftRight, reg - REG_FFT_DATA_R0);
+            break;
+        
         case REG_DISPLAY_MODE:
             w.displayMode = ntohl(value);
             break;
@@ -83,12 +82,6 @@ void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
         case REG_COMMIT:
             noInterrupts();
             {
-                const uint8_t leftBase = w.fftLeftUsesReg10 ? 0U : 1U;
-                for (uint8_t i = 0; i < 4; i++) {
-                    unpackFftWord(w.fftLeftWords[leftBase + i], w.fftLeft, i);
-                    unpackFftWord(w.fftRightWords[i], w.fftRight, i);
-                }
-
                 const uint8_t oldRead = readBufferIndex;
                 readBufferIndex = writeBufferIndex;
                 writeBufferIndex = oldRead;

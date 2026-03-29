@@ -40,6 +40,8 @@ public:
   void setSampleRate(int sampleRate, bool force = false);
   void setUIMode(int uiMode, bool force = false);
   void setVUMeterValue(float left, float right, bool force = false);
+  void setFFTValuesLeft(const float *values, bool force = false);
+  void setFFTValuesRight(const float *values, bool force = false);
   void pushInitialSettings(ControlValues &controlValues);
   void update(ControlValues &controlValues);
   void commit();
@@ -49,6 +51,7 @@ private:
 
   void sendRegister(uint8_t reg, uint32_t value, bool force = false);
   void updateFilterBand(int band, bool force = false);
+  void setFFTValues(const float *values, bool isLeft, bool force = false);
 
   uint32_t registerCache[DISPLAY_REGISTER_COUNT] = {};
 };

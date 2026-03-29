@@ -120,6 +120,35 @@ void Display::setVUMeterValue(float left, float right, bool force)
   sendRegister(REG_VU_METER, htonl(vuValue), force);
 }
 
+void Display::setFFTValuesLeft(const float *values, bool force)
+{
+  setFFTValues(values, true, force);
+}
+
+void Display::setFFTValuesRight(const float *values, bool force)
+{
+  setFFTValues(values, false, force);
+}
+
+void Display::setFFTValues(const float *values, bool isLeft, bool force)
+{
+  if(!values) {
+    return;
+  }
+  int reg = isLeft ? REG_FFT_DATA_L0 : REG_FFT_DATA_R0;
+  uint32_t acc = 0;  
+  for(size_t i = 0; i < FFT_DISPLAY_BINS; i++) {
+    float clamped = std::clamp(values[i], 0.0f, 1.0f);
+    uint8_t intValue = static_cast<uint8_t>(clamped * 255.0f);
+    acc |= intValue << ((i & 0x03) * 8);
+    if((i & 0x03) == 3) {
+      sendRegister(reg, ntohl(acc), force); 
+      reg++;
+      acc = 0;
+    }
+  }
+}
+
 void Display::setUIMode(int uiMode, bool force)
 {
   sendRegister(REG_UI_MODE, htonl(uiMode), force);

@@ -40,4 +40,6 @@
 #define UI_MODE_FFT 0x02
 #define NUM_UI_MODES 3
 
+#define FFT_DISPLAY_BINS 16
+
 #endif // CONSTANTS_H_INCLUDED

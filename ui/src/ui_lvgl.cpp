@@ -43,7 +43,7 @@ namespace
     constexpr lv_coord_t kSimpleVuRedHeight = (kScreenHeight + 9) / 10;
     constexpr uint8_t kSimpleVuTickCount = 5;
     constexpr lv_coord_t kSimplePeakMarkerHeight = 2;
-    constexpr uint8_t kFftBinCount = 8;
+    constexpr uint8_t kFftBinCount = 16;
     constexpr lv_coord_t kFftFrameX = 8;
     constexpr lv_coord_t kFftFrameY = 8;
     constexpr lv_coord_t kFftFrameWidth = 304;
@@ -52,7 +52,6 @@ namespace
     constexpr lv_coord_t kFftTrackY = 24;
     constexpr lv_coord_t kFftTrackHeight = 182;
     constexpr lv_coord_t kFftBarGroupGap = 2;
-    constexpr lv_coord_t kFftBarInnerGap = 1;
     constexpr uint32_t kVuAttackMs = 2;
     constexpr uint32_t kVuReleaseMs = 210;
     constexpr uint32_t kVuPeakHoldMs = 220;
@@ -91,20 +90,13 @@ namespace
     lv_obj_t *g_simpleOutGainValue = nullptr;
     lv_obj_t *g_simpleInGainLabel = nullptr;
     lv_obj_t *g_simpleInGainValue = nullptr;
-    lv_obj_t *g_fftLeftTrack[kFftBinCount] = {};
-    lv_obj_t *g_fftLeftBgGreen[kFftBinCount] = {};
-    lv_obj_t *g_fftLeftBgRed[kFftBinCount] = {};
-    lv_obj_t *g_fftLeftGreen[kFftBinCount] = {};
-    lv_obj_t *g_fftLeftRed[kFftBinCount] = {};
-    lv_obj_t *g_fftLeftGlow[kFftBinCount] = {};
-    lv_obj_t *g_fftLeftPeak[kFftBinCount] = {};
-    lv_obj_t *g_fftRightTrack[kFftBinCount] = {};
-    lv_obj_t *g_fftRightBgGreen[kFftBinCount] = {};
-    lv_obj_t *g_fftRightBgRed[kFftBinCount] = {};
-    lv_obj_t *g_fftRightGreen[kFftBinCount] = {};
-    lv_obj_t *g_fftRightRed[kFftBinCount] = {};
-    lv_obj_t *g_fftRightGlow[kFftBinCount] = {};
-    lv_obj_t *g_fftRightPeak[kFftBinCount] = {};
+    lv_obj_t *g_fftTrack[kFftBinCount] = {};
+    lv_obj_t *g_fftBgGreen[kFftBinCount] = {};
+    lv_obj_t *g_fftBgRed[kFftBinCount] = {};
+    lv_obj_t *g_fftGreen[kFftBinCount] = {};
+    lv_obj_t *g_fftRed[kFftBinCount] = {};
+    lv_obj_t *g_fftGlow[kFftBinCount] = {};
+    lv_obj_t *g_fftPeak[kFftBinCount] = {};
     uint32_t g_activeUiMode = kUiModeDetailed;
 
     lv_obj_t *g_valueFs = nullptr;
@@ -125,12 +117,9 @@ namespace
     uint32_t g_vuPeakHoldUntilLeft = 0;
     uint32_t g_vuPeakHoldUntilRight = 0;
     uint32_t g_lastVuAnimMs = 0;
-    uint16_t g_fftDisplayedLeft[kFftBinCount] = {};
-    uint16_t g_fftDisplayedRight[kFftBinCount] = {};
-    uint16_t g_fftPeakLeft[kFftBinCount] = {};
-    uint16_t g_fftPeakRight[kFftBinCount] = {};
-    uint32_t g_fftPeakHoldUntilLeft[kFftBinCount] = {};
-    uint32_t g_fftPeakHoldUntilRight[kFftBinCount] = {};
+    uint16_t g_fftDisplayed[kFftBinCount] = {};
+    uint16_t g_fftPeakLevel[kFftBinCount] = {};
+    uint32_t g_fftPeakHoldUntil[kFftBinCount] = {};
     uint32_t g_lastFftAnimMs = 0;
 
     uint32_t g_lastTickMs = 0;
@@ -642,14 +631,10 @@ namespace
             g_lastFftAnimMs = now;
             for (uint8_t i = 0; i < kFftBinCount; i++)
             {
-                const uint16_t leftLevel = fftBinToLevel(leftBins[i]);
-                const uint16_t rightLevel = fftBinToLevel(rightBins[i]);
-                g_fftDisplayedLeft[i] = leftLevel;
-                g_fftDisplayedRight[i] = rightLevel;
-                g_fftPeakLeft[i] = leftLevel;
-                g_fftPeakRight[i] = rightLevel;
-                g_fftPeakHoldUntilLeft[i] = now + kVuPeakHoldMs;
-                g_fftPeakHoldUntilRight[i] = now + kVuPeakHoldMs;
+                const uint16_t averagedLevel = fftBinToLevel(static_cast<uint8_t>((static_cast<uint16_t>(leftBins[i]) + static_cast<uint16_t>(rightBins[i])) / 2U));
+                g_fftDisplayed[i] = averagedLevel;
+                g_fftPeakLevel[i] = averagedLevel;
+                g_fftPeakHoldUntil[i] = now + kVuPeakHoldMs;
             }
         }
 
@@ -662,17 +647,13 @@ namespace
 
         for (uint8_t i = 0; i < kFftBinCount; i++)
         {
-            const uint16_t targetLeft = fftBinToLevel(leftBins[i]);
-            const uint16_t targetRight = fftBinToLevel(rightBins[i]);
+            const uint8_t averagedBin = static_cast<uint8_t>((static_cast<uint16_t>(leftBins[i]) + static_cast<uint16_t>(rightBins[i])) / 2U);
+            const uint16_t targetLevel = fftBinToLevel(averagedBin);
 
-            g_fftDisplayedLeft[i] = applyVuBallistic(g_fftDisplayedLeft[i], targetLeft, dt);
-            g_fftDisplayedRight[i] = applyVuBallistic(g_fftDisplayedRight[i], targetRight, dt);
+            g_fftDisplayed[i] = applyVuBallistic(g_fftDisplayed[i], targetLevel, dt);
+            updateVuPeak(g_fftDisplayed[i], g_fftPeakLevel[i], g_fftPeakHoldUntil[i], now, dt);
 
-            updateVuPeak(g_fftDisplayedLeft[i], g_fftPeakLeft[i], g_fftPeakHoldUntilLeft[i], now, dt);
-            updateVuPeak(g_fftDisplayedRight[i], g_fftPeakRight[i], g_fftPeakHoldUntilRight[i], now, dt);
-
-            setSimpleVuChannelLevel(g_fftLeftTrack[i], g_fftLeftGreen[i], g_fftLeftRed[i], g_fftLeftGlow[i], g_fftLeftPeak[i], g_fftDisplayedLeft[i], g_fftPeakLeft[i]);
-            setSimpleVuChannelLevel(g_fftRightTrack[i], g_fftRightGreen[i], g_fftRightRed[i], g_fftRightGlow[i], g_fftRightPeak[i], g_fftDisplayedRight[i], g_fftPeakRight[i]);
+            setSimpleVuChannelLevel(g_fftTrack[i], g_fftGreen[i], g_fftRed[i], g_fftGlow[i], g_fftPeak[i], g_fftDisplayed[i], g_fftPeakLevel[i]);
         }
     }
 
@@ -801,68 +782,34 @@ void ui_lvgl_init(TFT_eSPI &tft)
     lv_label_set_text(fftTitle, "FFT");
     lv_obj_set_pos(fftTitle, kFftFrameX + 6, kFftFrameY + 2);
 
-    lv_obj_t *fftLegendL = lv_label_create(g_modeFftRoot);
-    lv_obj_set_style_text_color(fftLegendL, colorVuGreen(), 0);
-    lv_obj_set_style_text_font(fftLegendL, &lv_font_montserrat_8, 0);
-    lv_label_set_text(fftLegendL, "L");
-    lv_obj_set_pos(fftLegendL, kFftFrameX + kFftFrameWidth - 24, kFftFrameY + 6);
-
-    lv_obj_t *fftLegendR = lv_label_create(g_modeFftRoot);
-    lv_obj_set_style_text_color(fftLegendR, colorChartSelected(), 0);
-    lv_obj_set_style_text_font(fftLegendR, &lv_font_montserrat_8, 0);
-    lv_label_set_text(fftLegendR, "R");
-    lv_obj_set_pos(fftLegendR, kFftFrameX + kFftFrameWidth - 14, kFftFrameY + 6);
-
     const lv_coord_t fftBarsAreaWidth = kFftFrameWidth - (2 * kFftTrackX);
-    const lv_coord_t barGroupWidth = (fftBarsAreaWidth - ((kFftBinCount - 1) * kFftBarGroupGap)) / kFftBinCount;
-    const lv_coord_t barWidth = (barGroupWidth - kFftBarInnerGap) / 2;
+    const lv_coord_t barWidth = (fftBarsAreaWidth - ((kFftBinCount - 1) * kFftBarGroupGap)) / kFftBinCount;
 
     for (uint8_t i = 0; i < kFftBinCount; i++)
     {
-        const lv_coord_t x = kFftFrameX + kFftTrackX + i * (barGroupWidth + kFftBarGroupGap);
+        const lv_coord_t x = kFftFrameX + kFftTrackX + i * (barWidth + kFftBarGroupGap);
         const lv_coord_t y = kFftFrameY + kFftTrackY;
 
-        g_fftLeftTrack[i] = lv_obj_create(g_modeFftRoot);
-        styleSimpleVuTrack(g_fftLeftTrack[i]);
-        lv_obj_set_pos(g_fftLeftTrack[i], x, y);
-        lv_obj_set_size(g_fftLeftTrack[i], barWidth, kFftTrackHeight);
+        g_fftTrack[i] = lv_obj_create(g_modeFftRoot);
+        styleSimpleVuTrack(g_fftTrack[i]);
+        lv_obj_set_pos(g_fftTrack[i], x, y);
+        lv_obj_set_size(g_fftTrack[i], barWidth, kFftTrackHeight);
 
-        g_fftLeftBgGreen[i] = lv_obj_create(g_fftLeftTrack[i]);
-        styleSimpleVuFill(g_fftLeftBgGreen[i], colorVuTrack());
-        g_fftLeftBgRed[i] = lv_obj_create(g_fftLeftTrack[i]);
-        styleSimpleVuFill(g_fftLeftBgRed[i], colorVuTrackTop());
-        g_fftLeftGreen[i] = lv_obj_create(g_fftLeftTrack[i]);
-        styleSimpleVuFill(g_fftLeftGreen[i], colorVuGreen());
-        g_fftLeftRed[i] = lv_obj_create(g_fftLeftTrack[i]);
-        styleSimpleVuFill(g_fftLeftRed[i], colorVuRed());
-        g_fftLeftGlow[i] = lv_obj_create(g_fftLeftTrack[i]);
-        styleSimpleVuGlow(g_fftLeftGlow[i]);
-        g_fftLeftPeak[i] = lv_obj_create(g_fftLeftTrack[i]);
-        styleSimplePeakMarker(g_fftLeftPeak[i]);
+        g_fftBgGreen[i] = lv_obj_create(g_fftTrack[i]);
+        styleSimpleVuFill(g_fftBgGreen[i], colorVuTrack());
+        g_fftBgRed[i] = lv_obj_create(g_fftTrack[i]);
+        styleSimpleVuFill(g_fftBgRed[i], colorVuTrackTop());
+        g_fftGreen[i] = lv_obj_create(g_fftTrack[i]);
+        styleSimpleVuFill(g_fftGreen[i], colorVuGreen());
+        g_fftRed[i] = lv_obj_create(g_fftTrack[i]);
+        styleSimpleVuFill(g_fftRed[i], colorVuRed());
+        g_fftGlow[i] = lv_obj_create(g_fftTrack[i]);
+        styleSimpleVuGlow(g_fftGlow[i]);
+        g_fftPeak[i] = lv_obj_create(g_fftTrack[i]);
+        styleSimplePeakMarker(g_fftPeak[i]);
 
-        g_fftRightTrack[i] = lv_obj_create(g_modeFftRoot);
-        styleSimpleVuTrack(g_fftRightTrack[i]);
-        lv_obj_set_pos(g_fftRightTrack[i], x + barWidth + kFftBarInnerGap, y);
-        lv_obj_set_size(g_fftRightTrack[i], barWidth, kFftTrackHeight);
-
-        g_fftRightBgGreen[i] = lv_obj_create(g_fftRightTrack[i]);
-        styleSimpleVuFill(g_fftRightBgGreen[i], colorVuTrack());
-        g_fftRightBgRed[i] = lv_obj_create(g_fftRightTrack[i]);
-        styleSimpleVuFill(g_fftRightBgRed[i], colorVuTrackTop());
-        g_fftRightGreen[i] = lv_obj_create(g_fftRightTrack[i]);
-        styleSimpleVuFill(g_fftRightGreen[i], colorChartSelected());
-        g_fftRightRed[i] = lv_obj_create(g_fftRightTrack[i]);
-        styleSimpleVuFill(g_fftRightRed[i], colorVuRed());
-        g_fftRightGlow[i] = lv_obj_create(g_fftRightTrack[i]);
-        styleSimpleVuGlow(g_fftRightGlow[i]);
-        g_fftRightPeak[i] = lv_obj_create(g_fftRightTrack[i]);
-        styleSimplePeakMarker(g_fftRightPeak[i]);
-
-        setSimpleVuBackground(g_fftLeftTrack[i], g_fftLeftBgGreen[i], g_fftLeftBgRed[i]);
-        setSimpleVuBackground(g_fftRightTrack[i], g_fftRightBgGreen[i], g_fftRightBgRed[i]);
-
-        setSimpleVuChannelLevel(g_fftLeftTrack[i], g_fftLeftGreen[i], g_fftLeftRed[i], g_fftLeftGlow[i], g_fftLeftPeak[i], 0, 0);
-        setSimpleVuChannelLevel(g_fftRightTrack[i], g_fftRightGreen[i], g_fftRightRed[i], g_fftRightGlow[i], g_fftRightPeak[i], 0, 0);
+        setSimpleVuBackground(g_fftTrack[i], g_fftBgGreen[i], g_fftBgRed[i]);
+        setSimpleVuChannelLevel(g_fftTrack[i], g_fftGreen[i], g_fftRed[i], g_fftGlow[i], g_fftPeak[i], 0, 0);
     }
 
     lv_obj_t *simpleLeftVuFrame = lv_obj_create(g_modeSimpleRoot);

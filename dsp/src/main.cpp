@@ -51,6 +51,8 @@
 #include "audio_pipeline/audio_rms.h"
 #include "audio_pipeline/audio_peak.h"
 #include "audio_pipeline/audio_controller.h"
+#include "audio_pipeline/audio_fft32.h"
+#include "audio_pipeline/audio_spectrum_td.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
@@ -144,6 +146,8 @@ AudioFilterBiquadFloat filter;
 AudioGain gain;
 AudioRMS rmsMeter;
 AudioPeak peakMeter;
+AudioFFT32 fft;
+AudioSpectrumTD spectrum;
 
 ControlValues controlValues(filter);
 Display display;
@@ -313,8 +317,10 @@ void setup(void)
   gain.addReceiver(&filter);
   filter.addReceiver(&rmsMeter);
   filter.addReceiver(&peakMeter);
+  filter.addReceiver(&fft);
   filter.addReceiver(AudioController::getInstance());
-  gain.setGain(1.0f); 
+  gain.setGain(1.0f);
+  fft.setAmplitudeScale(AudioFFT32::AmplitudeScale::Decibels);
 
 #ifdef TESTMODE
   testTone.addReceiver(&gain);
@@ -366,10 +372,14 @@ void setup(void)
   pinMode(LED_BUILTIN, OUTPUT);
 
   // Set up pushbuttons
-  filterTypeSelectButton.attachPress([]() { controlValues.cycleFilterType(); });
-  filterSelectButton.attachPress([]() { controlValues.cycleSelectedBand(); });
-  displayModeButton.attachPress([]() { controlValues.cycleDisplayMode(); });
-  uiModeButton.attachPress([]() { controlValues.cycleUIMode(); });
+  filterTypeSelectButton.attachPress([]()
+                                     { controlValues.cycleFilterType(); });
+  filterSelectButton.attachPress([]()
+                                 { controlValues.cycleSelectedBand(); });
+  displayModeButton.attachPress([]()
+                                { controlValues.cycleDisplayMode(); });
+  uiModeButton.attachPress([]()
+                           { controlValues.cycleUIMode(); });
 
   // Initialize S2C
   Wire.begin();
@@ -502,8 +512,12 @@ void updateSampleRateStatus(uint32_t &lastSampleRate, bool &lastSampleRateStable
     return;
   }
 
-  // Update all filters with new sample rate
-  updateAllFilters();
+  // Retune only when stable to avoid invalid coefficients during clock transients.
+  if (currentSampleRateStable)
+  {
+    updateAllFilters();
+    fft.setSampleRate(currentSampleRate);
+  }
 
   lastSampleRate = currentSampleRate;
   lastSampleRateStable = currentSampleRateStable;
@@ -532,7 +546,8 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
       AudioController::getNumStableIntervals());
   nextStatusPrint = currentTime + 2000;
   Serial.printf("RMS Level: %f, / %f, peak: %f / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight(), peakMeter.getPeakLeft(), peakMeter.getPeakRight());
-  if(controlValues.getUIMode() != UI_MODE_SIMPLE) {
+  if (controlValues.getUIMode() != UI_MODE_SIMPLE)
+  {
     peakMeter.reset();
   }
   uint32_t processCount = AudioController::getProcessCount();
@@ -699,14 +714,32 @@ void loop(void)
   static bool lastSampleRateStable = false;
   static time_t nextStatusPrint = 0;
   static time_t lastDACCheck = 0;
-  static time_t lastVUMeterUpdate = 0;
+  static time_t lastMeterUpdate = 0;
   time_t currentTime = millis();
 
-  if(controlValues.getUIMode() == UI_MODE_SIMPLE && currentTime - lastVUMeterUpdate >= 10) 
+  if (currentTime - lastMeterUpdate >= 10)
   {
-    display.setVUMeterValue(peakMeter.getPeakLeft(), peakMeter.getPeakRight());
-    peakMeter.reset();
-    lastVUMeterUpdate = currentTime;
+    if (controlValues.getUIMode() == UI_MODE_SIMPLE)
+    {
+      display.setVUMeterValue(peakMeter.getPeakLeft(), peakMeter.getPeakRight());
+      peakMeter.reset();
+      display.commit();
+    } else if (controlValues.getUIMode() == UI_MODE_FFT)
+    {
+      sample_t fftLeft[FFT_DISPLAY_BINS];
+      sample_t fftRight[FFT_DISPLAY_BINS];
+      time_t start = micros();
+      if (fft.doFFT(fftLeft, fftRight))
+      {
+        display.setFFTValuesLeft(fftLeft, true);
+        display.setFFTValuesRight(fftRight, true);
+        display.commit();
+        time_t end = micros();
+        Serial.printf("FFT display update time: %u us\n", end - start);
+
+      }
+    }
+    lastMeterUpdate = currentTime;
   }
 
   // Is the DAC still connected? If not, blink the LED and keep checking until it comes back
@@ -724,7 +757,7 @@ void loop(void)
   // If the selected band changed, we need to sync the encoder positions to the new band's settings
 
   readControlValues(controlValues);
- // Serial.printf("DIrty flags - dirty: %d, bandChanged: %d, filterChanged: %d\n",
+  // Serial.printf("DIrty flags - dirty: %d, bandChanged: %d, filterChanged: %d\n",
   //               controlValues.isDirty(),
   //               controlValues.isBandChanged(),
   //               controlValues.isFilterChanged());

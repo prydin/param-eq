@@ -116,8 +116,7 @@ AudioController::AudioController() : AudioComponent() {
 }
 
 void AudioController::process(AudioBuffer* block) {
-    // Running the audio chain with unstable sample rate can cause weird behavior.
-    if(!getInstance()->enabled || !isSampleRateStable()) {
+    if(!getInstance()->enabled) {
         return;
     }
     // This is the final destination - convert samples to int32 for output
@@ -145,14 +144,12 @@ void AudioController::process(AudioBuffer* block) {
 }
 void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
 {
-    // Running the audio chain with unstable sample rate can cause weird behavior.
-    if(!getInstance()->enabled || !isSampleRateStable() || inputs == nullptr) {
+    if(!getInstance()->enabled || inputs == nullptr) {
         for(int ch = 0; ch < AUDIO_CHANNELS; ch++) {
             for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
                 outputs[ch][i] = 0;
             }
         }
-        Serial.print("0");
         return;
     }
 
