@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "ui-test",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}

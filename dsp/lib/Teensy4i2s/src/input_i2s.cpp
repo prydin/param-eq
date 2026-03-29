@@ -35,7 +35,8 @@ static int32_t dataL[AUDIO_BLOCK_SAMPLES*2] = {0};
 static int32_t dataR[AUDIO_BLOCK_SAMPLES*2] = {0};
 static int32_t* bufferL[2] = { &dataL[0], &dataL[AUDIO_BLOCK_SAMPLES] };
 static int32_t* bufferR[2] = { &dataR[0], &dataR[AUDIO_BLOCK_SAMPLES] };
-int iter = 0;
+static volatile uint8_t writeBufferIndex = 0;
+static volatile uint8_t readyBufferIndex = 0;
 volatile uint32_t AudioInputI2S::interruptIntervalMicros = 1; // initialized to 1 to avoid division by zero on first read
 volatile uint32_t AudioInputI2S::numStableIntervals = 0;
 volatile uint32_t AudioInputI2S::lastTimeStamp = 0;
@@ -80,8 +81,9 @@ void AudioInputI2S::begin()
 
 int32_t** AudioInputI2S::getData()
 {
-	outBuffers[0] = bufferL[iter];
-	outBuffers[1] = bufferR[iter];
+	uint8_t index = readyBufferIndex;
+	outBuffers[0] = bufferL[index];
+	outBuffers[1] = bufferR[index];
 	return outBuffers;
 }
 
@@ -96,7 +98,6 @@ void AudioInputI2S::isr(void)
 			numStableIntervals++;
 		}
 	} else {
-		Serial.printf("Sample rate changed: %u us interval\n", interruptIntervalMicros);
 		numStableIntervals = 0;
 	}
 	
@@ -119,17 +120,21 @@ void AudioInputI2S::isr(void)
 		src = (int32_t *)&i2s_rx_buffer[0];
 	}
 
-	dest_left = bufferL[iter];
-	dest_right = bufferR[iter];
+	// Invalidate cache for the DMA-written half before reading it.
+	arm_dcache_delete((void*)src, sizeof(i2s_rx_buffer) / 2);
+
+	uint8_t index = writeBufferIndex;
+	dest_left = bufferL[index];
+	dest_right = bufferR[index];
 	
 	for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
 	{
 		dest_left[i] = src[2*i];
 		dest_right[i] = src[2*i+1];
 	}
-	
-	arm_dcache_delete((void*)src, sizeof(i2s_rx_buffer) / 2);
-	iter = iter == 0 ? 1 : 0;
+
+	readyBufferIndex = index;
+	writeBufferIndex = index == 0 ? 1 : 0;
 }
 
 void AudioInputI2Sslave::begin(void)

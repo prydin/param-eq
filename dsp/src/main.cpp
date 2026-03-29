@@ -49,6 +49,7 @@
 #include "audio_pipeline/audio_square_wave.h"
 #include "audio_pipeline/audio_gain.h"
 #include "audio_pipeline/audio_rms.h"
+#include "audio_pipeline/audio_peak.h"
 #include "audio_pipeline/audio_controller.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
@@ -103,6 +104,7 @@
 #define INPUT_GAIN_PIN_B 3
 #define VOLUME_PIN_A 11
 #define VOLUME_PIN_B 12
+#define UI_MODE_PIN 1
 
 // Settings save interval
 #define SAVE_INTERVAL_MS 5000
@@ -129,6 +131,7 @@ AcceleratedEncoder volumeSelector(VOLUME_PIN_A, VOLUME_PIN_B);
 OneButton filterSelectButton(FILTER_INDEX_PIN, true);
 OneButton filterTypeSelectButton(FILTER_TYPE_PIN, true);
 OneButton displayModeButton(FILTER_MODE_PIN, true);
+OneButton uiModeButton(UI_MODE_PIN, true);
 
 AudioSquareWave waveform;
 #ifdef TESTMODE
@@ -140,6 +143,7 @@ AudioFilterBiquadFloat filter;
 
 AudioGain gain;
 AudioRMS rmsMeter;
+AudioPeak peakMeter;
 
 ControlValues controlValues(filter);
 Display display;
@@ -226,7 +230,12 @@ void initDAC()
  */
 void updateFilter(int selected)
 {
-  FilterSettings settings = controlValues.getCurrentFilter();
+  FilterSettings settings = controlValues.getFilter(selected);
+  if (!isfinite(settings.frequency) || !isfinite(settings.Q) || !isfinite(settings.gain))
+  {
+    filter.bypass(selected);
+    return;
+  }
   switch (settings.type)
   {
   case LOWSHELF:
@@ -273,6 +282,7 @@ void initDisplay()
 {
   display.setMasterGain(controlValues.getMasterGain());
   display.setVolume(controlValues.getVolume());
+  display.setUIMode(controlValues.getUIMode());
   updateAllFilters();
   display.commit();
 }
@@ -302,8 +312,9 @@ void setup(void)
   // Source -> Gain -> Filter -> I2S
   gain.addReceiver(&filter);
   filter.addReceiver(&rmsMeter);
+  filter.addReceiver(&peakMeter);
   filter.addReceiver(AudioController::getInstance());
-  gain.setGain(1.0f); // Initial gain to avoid clipping
+  gain.setGain(1.0f); 
 
 #ifdef TESTMODE
   testTone.addReceiver(&gain);
@@ -358,7 +369,7 @@ void setup(void)
   filterTypeSelectButton.attachPress([]() { controlValues.cycleFilterType(); });
   filterSelectButton.attachPress([]() { controlValues.cycleSelectedBand(); });
   displayModeButton.attachPress([]() { controlValues.cycleDisplayMode(); });
-  
+  uiModeButton.attachPress([]() { controlValues.cycleUIMode(); });
 
   // Initialize S2C
   Wire.begin();
@@ -520,7 +531,10 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
       AudioController::isSampleRateStable() ? "true" : "false",
       AudioController::getNumStableIntervals());
   nextStatusPrint = currentTime + 2000;
-  Serial.printf("RMS Level: %f, / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
+  Serial.printf("RMS Level: %f, / %f, peak: %f / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight(), peakMeter.getPeakLeft(), peakMeter.getPeakRight());
+  if(controlValues.getUIMode() != UI_MODE_SIMPLE) {
+    peakMeter.reset();
+  }
   uint32_t processCount = AudioController::getProcessCount();
   Serial.printf("Audio blocks processed: %lu (+%lu)\n",
                 (unsigned long)processCount,
@@ -556,6 +570,7 @@ void tickControls()
   qSelector.tick();
   filterTypeSelectButton.tick();
   filterSelectButton.tick();
+  uiModeButton.tick();
   displayModeButton.tick();
   masterGainSelector.tick();
   volumeSelector.tick();
@@ -684,7 +699,15 @@ void loop(void)
   static bool lastSampleRateStable = false;
   static time_t nextStatusPrint = 0;
   static time_t lastDACCheck = 0;
+  static time_t lastVUMeterUpdate = 0;
   time_t currentTime = millis();
+
+  if(controlValues.getUIMode() == UI_MODE_SIMPLE && currentTime - lastVUMeterUpdate >= 10) 
+  {
+    display.setVUMeterValue(peakMeter.getPeakLeft(), peakMeter.getPeakRight());
+    peakMeter.reset();
+    lastVUMeterUpdate = currentTime;
+  }
 
   // Is the DAC still connected? If not, blink the LED and keep checking until it comes back
   checkDACConnection(currentTime, lastDACCheck);
@@ -715,6 +738,8 @@ void loop(void)
     syncEncoders();
     updateFilter(controlValues.getSelectedBand());
   }
+  gain.setGain(powf(10.0f, controlValues.getMasterGain() / 20.0f));
+  dac.setVolumeDB(controlValues.getVolume());
   display.update(controlValues);
   display.commit();
   controlValues.reset();

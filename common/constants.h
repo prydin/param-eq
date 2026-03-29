@@ -11,7 +11,7 @@
 #define REG_IN_GAIN 0x01
 #define REG_FILTER_SELECT 0x02
 #define REG_FILTER_FREQ 0x03
-#define RESERVED1 0x04
+#define REG_VU_METER 0x04
 #define REG_SAMPLE_RATE 0x05
 #define REG_RESET 0x06
 #define REG_FILTER_TYPE 0x07
@@ -21,10 +21,23 @@
 #define REG_FILTER_COEFF3 0x0b
 #define REG_FILTER_COEFF4 0x0c
 #define REG_DISPLAY_MODE 0x0d
-#define REG_RESERVED2 0x0e
+#define REG_UI_MODE 0x0e
 #define REG_FILTER_Q 0x0f
 #define REG_FILTER_GAIN 0x10
+#define REG_FFT_DATA_L0 0x11
+#define REG_FFT_DATA_L1 0x12
+#define REG_FFT_DATA_L2 0x13
+#define REG_FFT_DATA_L3 0x14
+#define REG_FFT_DATA_R0 0x15
+#define REG_FFT_DATA_R1 0x16
+#define REG_FFT_DATA_R2 0x17
+#define REG_FFT_DATA_R3 0x18
+
 #define REG_COMMIT 0xff
 
+#define UI_MODE_DETAILED 0x00
+#define UI_MODE_SIMPLE 0x01
+#define UI_MODE_FFT 0x02
+#define NUM_UI_MODES 3
 
 #endif // CONSTANTS_H_INCLUDED

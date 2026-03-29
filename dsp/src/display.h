@@ -32,12 +32,14 @@ class Display
 public:
   Display() {}
 
-  void setFilterSettings(FilterSettings *settings = nullptr, sample_t *coeffs = nullptr, bool force = false);
+  void setFilterSettings(FilterSettings *settings = nullptr, const sample_t *coeffs = nullptr, bool force = false);
   void setFilterBand(int band, bool force = false);
   void setDisplayMode(int mode, bool force = false);
   void setMasterGain(float gain, bool force = false);
   void setVolume(float volume, bool force = false);
   void setSampleRate(int sampleRate, bool force = false);
+  void setUIMode(int uiMode, bool force = false);
+  void setVUMeterValue(float left, float right, bool force = false);
   void pushInitialSettings(ControlValues &controlValues);
   void update(ControlValues &controlValues);
   void commit();

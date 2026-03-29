@@ -28,12 +28,17 @@
 class AudioPeak : public AudioComponent
 {
 public:
-    AudioPeak() : peak(0.0f) {}
+    AudioPeak() : peakLeft(0.0f), peakRight(0.0f) {}
 
     virtual void process(AudioBuffer* block) override;
+    float getPeakLeft() const { return peakLeft; }
+    float getPeakRight() const { return peakRight; }
+    float getPeakCombined() const { return std::max(peakLeft, peakRight); }
+    void reset() { peakLeft = 0.0f; peakRight = 0.0f; }
 
 private:
-    float peak;
+    float peakLeft;
+    float peakRight;
 };
 
 #endif // AUDIO_PEAK_H

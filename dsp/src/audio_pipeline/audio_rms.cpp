@@ -26,12 +26,14 @@ void AudioRMS::process(AudioBuffer* block) {
     double sumRight = 0.0;
 
     for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-        sumLeft += block->data[0][i] * block->data[0][i];
-        sumRight += block->data[1][i] * block->data[1][i];
+        const float left = std::isfinite(block->data[0][i]) ? block->data[0][i] : 0.0f;
+        const float right = std::isfinite(block->data[1][i]) ? block->data[1][i] : 0.0f;
+        sumLeft += left * left;
+        sumRight += right * right;
     }
 
-    rmsLeft = sqrt(sumLeft / AUDIO_BLOCK_SAMPLES);
-    rmsRight = sqrt(sumRight / AUDIO_BLOCK_SAMPLES);
+    rmsLeft = static_cast<float>(std::sqrt(sumLeft / AUDIO_BLOCK_SAMPLES));
+    rmsRight = static_cast<float>(std::sqrt(sumRight / AUDIO_BLOCK_SAMPLES));
 
     transmit(block);
 }

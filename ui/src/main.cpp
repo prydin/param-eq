@@ -31,6 +31,12 @@ TFT_eSPI tft = TFT_eSPI(); // Create tft object
 
 RegisterBank registers;
 
+void unpackVuMeterLevels(uint32_t packedLevel, uint16_t &leftLevel, uint16_t &rightLevel)
+{
+  leftLevel = static_cast<uint16_t>(packedLevel >> 16);
+  rightLevel = static_cast<uint16_t>(packedLevel & 0xFFFFU);
+}
+
 #if UI_ENABLE_DEMO
 struct DemoState {
   uint8_t step;
@@ -230,6 +236,9 @@ void loop()
     data.filterType = registers.getFilterType();
     data.filterIndex = registers.getFilterSelect();
     data.displayMode = registers.getDisplayMode();
+    data.uiMode = registers.getUiMode();
+    unpackVuMeterLevels(registers.getVuMeterPacked(), data.vuLeft, data.vuRight);
+    registers.copyFftBins(data.fftLeft, data.fftRight, 16);
     data.sampleRate = registers.getSampleRate();
     data.inputGain = registers.getInputGain();
     data.filterGain = registers.getFilterGain();
@@ -243,6 +252,13 @@ void loop()
     demoState.lastRealUpdateMs = millis();
 #endif
     return;
+  }
+
+  uint16_t vuLeft = 0;
+  uint16_t vuRight = 0;
+  if (registers.takeVuMeterUpdate(vuLeft, vuRight))
+  {
+    ui_lvgl_update_vu(vuLeft, vuRight);
   }
 
 #if UI_ENABLE_DEMO

@@ -22,6 +22,7 @@
 
 #include "audio_pipeline/audio_controller.h"
 #include "netconv.h"
+#include <algorithm>
 #include <Wire.h>
 
 namespace
@@ -33,10 +34,8 @@ constexpr uint32_t kStartupDisplaySampleRate = 44100;
 void Display::sendRegister(uint8_t reg, uint32_t value, bool force)
 {
   if(!force && value == registerCache[reg]) {
-    Serial.printf("Skipping display update for reg %02x since value is unchanged\n", reg);
     return;
   }
-  Serial.printf("Updating display reg %02x to value %04x\n", reg, value);
   Wire.beginTransmission(DISPLAY_I2C_ADDRESS);
   Wire.write(reg);
   Wire.write((uint8_t *)&value, sizeof(value));
@@ -50,7 +49,7 @@ void Display::setFilterBand(int band, bool force)
   sendRegister(REG_FILTER_SELECT, htonl(band), force); 
 }
 
-void Display::setFilterSettings(FilterSettings *settings, sample_t *coeffs, bool force)
+void Display::setFilterSettings(FilterSettings *settings, const sample_t *coeffs, bool force)
 {
   if(!settings) {
     return;
@@ -108,6 +107,22 @@ void Display::update(ControlValues &controlValues) {
   setDisplayMode(controlValues.getDisplayMode());
   setMasterGain(controlValues.getMasterGain());
   setVolume(controlValues.getVolume());
+  setUIMode(controlValues.getUIMode());
+}
+
+void Display::setVUMeterValue(float left, float right, bool force)
+{
+  const float clampedLeft = std::clamp(left, 0.0f, 1.0f);
+  const float clampedRight = std::clamp(right, 0.0f, 1.0f);
+  const uint16_t leftValue = static_cast<uint16_t>(clampedLeft * 65535.0f + 0.5f);
+  const uint16_t rightValue = static_cast<uint16_t>(clampedRight * 65535.0f + 0.5f);
+  uint32_t vuValue = (static_cast<uint32_t>(leftValue) << 16) | rightValue;
+  sendRegister(REG_VU_METER, htonl(vuValue), force);
+}
+
+void Display::setUIMode(int uiMode, bool force)
+{
+  sendRegister(REG_UI_MODE, htonl(uiMode), force);
 }
 
 void Display::commit()

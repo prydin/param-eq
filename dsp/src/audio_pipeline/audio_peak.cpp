@@ -19,17 +19,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "audio_peak.h"
- 
-void AudioPeak::process(AudioBuffer* block) {
-        if (!block) {
-            return;
-        }
-        float maxSample = 0.0f;
-        for (size_t ch = 0; ch < AUDIO_CHANNELS; ++ch) {
-            for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i) {
-                maxSample = std::max(maxSample, std::abs(block->data[ch][i]));
-            }
-        }
-        peak = maxSample;
-        transmit(block);
+
+void AudioPeak::process(AudioBuffer *block)
+{
+    if (!block)
+    {
+        return;
     }
+    float maxLeft = 0.0f;
+    float maxRight = 0.0f;
+
+    for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
+    {
+        maxLeft = std::max(maxLeft, std::abs(block->data[0][i]));
+        maxRight = std::max(maxRight, std::abs(block->data[1][i]));
+    }
+    if (maxLeft > peakLeft)
+    {
+        peakLeft = maxLeft;
+    }
+    if (maxRight > peakRight)
+    {
+        peakRight = maxRight;
+    }
+    transmit(block);
+}

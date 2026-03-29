@@ -17,7 +17,8 @@ public:
   float getVolume() { return volume; }
   int getDisplayMode() { return displayMode; }
   int getSelectedBand() { return selectedBand; }
-  sample_t *getCoefficients() const { return filter.getCoefficients(selectedBand); }
+  int getUIMode() { return uiMode; }
+  const sample_t *getCoefficients() const { return filter.getCoefficients(selectedBand); }
 
   void setFrequency(float freq);
   void setQ(float qValue);
@@ -27,6 +28,8 @@ public:
   void setDisplayMode(int mode);
   void setFilterType(int type);
   void setSelectedBand(int band);
+  void setUIMode(int mode);
+  void cycleUIMode();
   void cycleSelectedBand();
   void cycleFilterType();
   void cycleDisplayMode();
@@ -40,10 +43,11 @@ public:
   void reset();
 
 private:
-  float masterGain;
-  float volume;
-  int displayMode;
-  int selectedBand;
+  float masterGain = 0.0f;
+  float volume = 0.0f;
+  int displayMode = 0;
+  int selectedBand = 0;
+  int uiMode = 0;
   bool dirty = false;
   bool bandChanged = false;
   bool filterChanged = false;
