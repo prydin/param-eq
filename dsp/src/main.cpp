@@ -149,6 +149,19 @@ AudioPeak peakMeter;
 AudioFFT32 fft;
 AudioSpectrumTD spectrum;
 
+enum class AnalyzerMode : uint8_t
+{
+  FFT = 0,
+  ConstantQ = 1,
+};
+
+static constexpr float ANALYZER_MIN_FREQUENCY = 1.0f;
+static constexpr float ANALYZER_MAX_FREQUENCY_SCALE = 0.48f;
+static constexpr float ANALYZER_BANDWIDTH_SCALE = 1.25f;
+static constexpr float ANALYZER_GAIN_DB = 12.0f;
+
+AnalyzerMode analyzerMode = AnalyzerMode::FFT;
+
 ControlValues controlValues(filter);
 Display display;
 
@@ -170,9 +183,46 @@ typedef enum ClipState
 ClipState clipState = NO_CLIP;
 uint32_t clipTimestamp = 0;
 
+uint32_t getCurrentSampleRate(bool *isChanged);
+
 bool checkDAC()
 {
   return dac.getChipID() != 0;
+}
+
+bool configureSpectrumAnalyzer(uint32_t sampleRate)
+{
+  const double effectiveSampleRate = sampleRate > 1000 ? sampleRate : 44100.0;
+  const double maxFrequency = effectiveSampleRate * ANALYZER_MAX_FREQUENCY_SCALE;
+  return spectrum.configure(FFT_DISPLAY_BINS,
+                            effectiveSampleRate,
+                            ANALYZER_MIN_FREQUENCY,
+                            maxFrequency,
+                            AudioSpectrumTD::Spacing::Logarithmic,
+                            AudioSpectrumTD::Detector::Peak,
+                            ANALYZER_BANDWIDTH_SCALE,
+                            ANALYZER_GAIN_DB);
+}
+
+void applyAnalyzerMode()
+{
+  const bool useFFT = analyzerMode == AnalyzerMode::FFT;
+  fft.setEnabled(useFFT);
+  spectrum.setEnabled(!useFFT);
+  Serial.printf("Analyzer mode: %s\n", useFFT ? "FFT" : "Constant-Q TD");
+}
+
+void toggleAnalyzerMode()
+{
+  analyzerMode = analyzerMode == AnalyzerMode::FFT ? AnalyzerMode::ConstantQ : AnalyzerMode::FFT;
+  const uint32_t sampleRate = getCurrentSampleRate(nullptr);
+  fft.setSampleRate(sampleRate);
+  if (!configureSpectrumAnalyzer(sampleRate))
+  {
+    Serial.println("Failed to configure Constant-Q analyzer.");
+    analyzerMode = AnalyzerMode::FFT;
+  }
+  applyAnalyzerMode();
 }
 
 /**
@@ -318,6 +368,7 @@ void setup(void)
   filter.addReceiver(&rmsMeter);
   filter.addReceiver(&peakMeter);
   filter.addReceiver(&fft);
+  filter.addReceiver(&spectrum);
   filter.addReceiver(AudioController::getInstance());
   gain.setGain(1.0f);
   fft.setAmplitudeScale(AudioFFT32::AmplitudeScale::Decibels);
@@ -378,6 +429,8 @@ void setup(void)
                                  { controlValues.cycleSelectedBand(); });
   displayModeButton.attachPress([]()
                                 { controlValues.cycleDisplayMode(); });
+  displayModeButton.attachLongPressStart([]()
+                                         { toggleAnalyzerMode(); });
   uiModeButton.attachPress([]()
                            { controlValues.cycleUIMode(); });
 
@@ -445,6 +498,9 @@ void setup(void)
 
   // Initial display update
   updateAllFilters();
+  fft.setSampleRate(getCurrentSampleRate(nullptr));
+  configureSpectrumAnalyzer(getCurrentSampleRate(nullptr));
+  applyAnalyzerMode();
   delay(1000); // Wait for display to be fully initialized
   initDisplay();
 }
@@ -517,6 +573,10 @@ void updateSampleRateStatus(uint32_t &lastSampleRate, bool &lastSampleRateStable
   {
     updateAllFilters();
     fft.setSampleRate(currentSampleRate);
+    if (!configureSpectrumAnalyzer(currentSampleRate))
+    {
+      Serial.println("Failed to reconfigure Constant-Q analyzer.");
+    }
   }
 
   lastSampleRate = currentSampleRate;
@@ -728,15 +788,14 @@ void loop(void)
     {
       sample_t fftLeft[FFT_DISPLAY_BINS];
       sample_t fftRight[FFT_DISPLAY_BINS];
-      time_t start = micros();
-      if (fft.doFFT(fftLeft, fftRight))
+      const bool hasValues = analyzerMode == AnalyzerMode::FFT
+                                 ? fft.doFFT(fftLeft, fftRight)
+                                 : (spectrum.getNormalizedBins(fftLeft, fftRight, FFT_DISPLAY_BINS), true);
+      if (hasValues)
       {
         display.setFFTValuesLeft(fftLeft, true);
         display.setFFTValuesRight(fftRight, true);
         display.commit();
-        time_t end = micros();
-        Serial.printf("FFT display update time: %u us\n", end - start);
-
       }
     }
     lastMeterUpdate = currentTime;

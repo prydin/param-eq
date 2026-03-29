@@ -12,6 +12,12 @@ void AudioFFT32::process(AudioBuffer *block)
     if (!block)
         return;
 
+    if (!isEnabled)
+    {
+        transmit(block);
+        return;
+    }
+
     int pos = writePos; // ISR is non-reentrant
     memcpy(&accumLeft[pos],  block->data[0], AUDIO_BLOCK_SAMPLES * sizeof(sample_t));
     memcpy(&accumRight[pos], block->data[1], AUDIO_BLOCK_SAMPLES * sizeof(sample_t));
@@ -187,6 +193,20 @@ void AudioFFT32::setAmplitudeScale(AmplitudeScale scale)
 {
     noInterrupts();
     amplitudeScale = scale;
+    aggregatedFrames = 0;
+    for (int d = 0; d < FFT_DISPLAY_BINS; d++)
+    {
+        aggregatedBinsLeft[d] = 0.0f;
+        aggregatedBinsRight[d] = 0.0f;
+    }
+    interrupts();
+}
+
+void AudioFFT32::setEnabled(bool enabled)
+{
+    noInterrupts();
+    isEnabled = enabled;
+    writePos = 0;
     aggregatedFrames = 0;
     for (int d = 0; d < FFT_DISPLAY_BINS; d++)
     {

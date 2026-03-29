@@ -23,6 +23,7 @@ public:
     };
 
     static constexpr size_t MAX_BINS = 64;
+    static constexpr size_t FILTER_STAGES = 3;
 
     AudioSpectrumTD();
 
@@ -60,20 +61,31 @@ private:
                                      double sampleRate,
                                      double bandwidthOctaves,
                                      Coefficients &out) const;
+    bool computeBandpassCoefficientsQ(double frequency,
+                                      double sampleRate,
+                                      double q,
+                                      Coefficients &out) const;
+    double responseMagnitudeAt(const Coefficients &c,
+                               double frequency,
+                               double sampleRate) const;
+    bool buildDecorrelationMatrix(double sampleRate);
 
     static float sanitizeLevel(float value);
 
     size_t binCount = 0;
     Spacing spacingMode = Spacing::Logarithmic;
     Detector detectorMode = Detector::RMS;
-    double analyzerBandwidthOctaves = 1.0;
+    double analyzerBandwidthScale = 1.0;
     float gainNormalization = 1.0f;
     float smoothing = 0.65f;
     bool isEnabled = false;
 
     float centerFrequencies[MAX_BINS] = {};
     Coefficients coeff[MAX_BINS] = {};
-    sample_t state[AUDIO_CHANNELS][MAX_BINS][2] = {};
+    float binGainComp[MAX_BINS] = {};
+    float decorrelation[MAX_BINS][MAX_BINS] = {};
+    bool decorrelationReady = false;
+    sample_t state[AUDIO_CHANNELS][MAX_BINS][FILTER_STAGES][2] = {};
     float binsLeft[MAX_BINS] = {};
     float binsRight[MAX_BINS] = {};
 };

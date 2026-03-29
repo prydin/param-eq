@@ -40,6 +40,8 @@ public:
     void setSampleRate(uint32_t rate);
     void setAmplitudeScale(AmplitudeScale scale);
     AmplitudeScale getAmplitudeScale() const { return amplitudeScale; }
+    void setEnabled(bool enabled);
+    bool getEnabled() const { return isEnabled; }
 
 private:
     static constexpr int FFT_BINS  = FFT_SIZE / 2;
@@ -74,6 +76,7 @@ private:
 
     uint32_t sampleRate = 48000;
     volatile AmplitudeScale amplitudeScale = AmplitudeScale::Linear;
+    volatile bool isEnabled = true;
 
     // Precomputed mapping from display band index → [binStart, binEnd] FFT bin range.
     int binStart[FFT_DISPLAY_BINS];
