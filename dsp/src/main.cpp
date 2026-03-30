@@ -147,7 +147,7 @@ AudioGain gain;
 AudioRMS rmsMeter;
 AudioPeak peakMeter;
 AudioFFT32 fft;
-AudioSpectrumTD spectrum;
+// AudioSpectrumTD spectrum;
 
 ControlValues controlValues(filter);
 Display display;
@@ -717,26 +717,28 @@ void loop(void)
   static time_t lastMeterUpdate = 0;
   time_t currentTime = millis();
 
-  if (currentTime - lastMeterUpdate >= 10)
+  if (currentTime - lastMeterUpdate >= 50)
   {
     if (controlValues.getUIMode() == UI_MODE_SIMPLE)
     {
       display.setVUMeterValue(peakMeter.getPeakLeft(), peakMeter.getPeakRight());
+      //display.setVUMeterValue(rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
       peakMeter.reset();
       display.commit();
     } else if (controlValues.getUIMode() == UI_MODE_FFT)
     {
       sample_t fftLeft[FFT_DISPLAY_BINS];
       sample_t fftRight[FFT_DISPLAY_BINS];
-      time_t start = micros();
+      sample_t fftAvg[FFT_DISPLAY_BINS];
       if (fft.doFFT(fftLeft, fftRight))
       {
-        display.setFFTValuesLeft(fftLeft, true);
-        display.setFFTValuesRight(fftRight, true);
+        for (int i = 0; i < FFT_DISPLAY_BINS; i++)
+        {
+          fftAvg[i] = 0.5f * (fftLeft[i] + fftRight[i]);
+        }
+        Serial.println(fftAvg[0]);
+        display.setFFTValues(fftAvg, true);
         display.commit();
-        time_t end = micros();
-        Serial.printf("FFT display update time: %u us\n", end - start);
-
       }
     }
     lastMeterUpdate = currentTime;

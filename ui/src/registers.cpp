@@ -65,14 +65,7 @@ void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
         case REG_FFT_DATA_L2:
         case REG_FFT_DATA_L3:
             unpackFftWord(ntohl(value), w.fftLeft, reg - REG_FFT_DATA_L0);
-            break;
-        case REG_FFT_DATA_R0:
-        case REG_FFT_DATA_R1:
-        case REG_FFT_DATA_R2:
-        case REG_FFT_DATA_R3:
-            unpackFftWord(ntohl(value), w.fftRight, reg - REG_FFT_DATA_R0);
-            break;
-        
+            break;        
         case REG_DISPLAY_MODE:
             w.displayMode = ntohl(value);
             break;

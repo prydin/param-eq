@@ -13,7 +13,6 @@ struct UiData {
   uint16_t vuLeft;
   uint16_t vuRight;
   uint8_t fftLeft[16];
-  uint8_t fftRight[16];
 
   uint32_t sampleRate;
   float inputGain;

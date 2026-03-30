@@ -29,6 +29,7 @@
 #include "output_i2s.h"
 
 #define REQUIRED_STABLE_INTERVALS 10
+#define MAX_STABILITY_MISSES 3
 
 // set up two flip-flopped buffers, one is used for queueing up data for processing, the other receives data from I2S codec
 static int32_t dataL[AUDIO_BLOCK_SAMPLES*2] = {0};
@@ -40,6 +41,8 @@ static volatile uint8_t readyBufferIndex = 0;
 volatile uint32_t AudioInputI2S::interruptIntervalMicros = 1; // initialized to 1 to avoid division by zero on first read
 volatile uint32_t AudioInputI2S::numStableIntervals = 0;
 volatile uint32_t AudioInputI2S::lastTimeStamp = 0;
+static volatile uint32_t filteredIntervalMicros = 0;
+static volatile uint8_t stabilityMisses = 0;
 
 // Common sample rates for rounding to the neastest standard rate
 uint32_t standardSampleRates[] {
@@ -90,15 +93,57 @@ int32_t** AudioInputI2S::getData()
 void AudioInputI2S::isr(void)
 {
 	uint32_t currentTime = micros();
-	uint32_t prev = interruptIntervalMicros;
- 	interruptIntervalMicros = currentTime - lastTimeStamp;
+	uint32_t rawInterval = currentTime - lastTimeStamp;
 	lastTimeStamp = currentTime;
-	if( abs((int32_t)interruptIntervalMicros - (int32_t)prev) < 100 ) {
-		if(numStableIntervals < REQUIRED_STABLE_INTERVALS) {
-			numStableIntervals++;
+
+	// Skip startup/invalid interval values to avoid false instability at boot.
+	if (rawInterval > 0 && rawInterval < 100000)
+	{
+		if (filteredIntervalMicros == 0)
+		{
+			filteredIntervalMicros = rawInterval;
 		}
-	} else {
-		numStableIntervals = 0;
+		else
+		{
+			// EWMA smoothing: fast enough for lock, robust against single delayed ISRs.
+			filteredIntervalMicros = (filteredIntervalMicros * 7 + rawInterval) / 8;
+		}
+
+		interruptIntervalMicros = filteredIntervalMicros;
+
+		// Tolerance is max(20us, 2% of filtered interval).
+		uint32_t tolerance = filteredIntervalMicros / 50;
+		if (tolerance < 20)
+		{
+			tolerance = 20;
+		}
+
+		int32_t delta = abs((int32_t)rawInterval - (int32_t)filteredIntervalMicros);
+		if ((uint32_t)delta <= tolerance)
+		{
+			if (numStableIntervals < REQUIRED_STABLE_INTERVALS)
+			{
+				numStableIntervals++;
+			}
+			if (stabilityMisses > 0)
+			{
+				stabilityMisses--;
+			}
+		}
+		else
+		{
+			if (stabilityMisses < MAX_STABILITY_MISSES)
+			{
+				stabilityMisses++;
+			}
+			if (stabilityMisses >= MAX_STABILITY_MISSES)
+			{
+				if (numStableIntervals > 0)
+				{
+					numStableIntervals--;
+				}
+			}
+		}
 	}
 	
 	uint32_t daddr;

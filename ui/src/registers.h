@@ -54,13 +54,12 @@ class RegisterBank {
             interrupts();
             return packedLevel;
         }
-        void copyFftBins(uint8_t *leftBins, uint8_t *rightBins, size_t binCount) {
+        void copyFftBins(uint8_t *bins, size_t binCount) {
             const size_t count = (binCount > 16U) ? 16U : binCount;
             const RegisterState &r = buffers[readBufferIndex];
 
             for (size_t i = 0; i < count; i++) {
-                leftBins[i] = r.fftLeft[i];
-                rightBins[i] = r.fftRight[i];
+                bins[i] = r.fftLeft[i];
             }
         }
 
@@ -80,10 +79,6 @@ class RegisterBank {
             uint32_t displayMode = 0;
             uint32_t uiMode = 1;
             uint8_t fftLeft[16] = {};
-            uint8_t fftRight[16] = {};
-            uint32_t fftLeftWords[5] = {};
-            uint32_t fftRightWords[4] = {};
-            bool fftLeftUsesReg10 = false;
         };
 
         RegisterState buffers[2] = {};

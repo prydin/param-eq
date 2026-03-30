@@ -618,9 +618,9 @@ namespace
         return static_cast<uint16_t>((static_cast<uint16_t>(bin) << 8) | bin);
     }
 
-    void updateFftMeters(const uint8_t *leftBins, const uint8_t *rightBins)
+    void updateFftMeters(const uint8_t *bins)
     {
-        if (leftBins == nullptr || rightBins == nullptr)
+        if (bins == nullptr)
         {
             return;
         }
@@ -631,9 +631,9 @@ namespace
             g_lastFftAnimMs = now;
             for (uint8_t i = 0; i < kFftBinCount; i++)
             {
-                const uint16_t averagedLevel = fftBinToLevel(static_cast<uint8_t>((static_cast<uint16_t>(leftBins[i]) + static_cast<uint16_t>(rightBins[i])) / 2U));
-                g_fftDisplayed[i] = averagedLevel;
-                g_fftPeakLevel[i] = averagedLevel;
+                const uint16_t level = fftBinToLevel(bins[i]);
+                g_fftDisplayed[i] = level;
+                g_fftPeakLevel[i] = level;
                 g_fftPeakHoldUntil[i] = now + kVuPeakHoldMs;
             }
         }
@@ -647,8 +647,7 @@ namespace
 
         for (uint8_t i = 0; i < kFftBinCount; i++)
         {
-            const uint8_t averagedBin = static_cast<uint8_t>((static_cast<uint16_t>(leftBins[i]) + static_cast<uint16_t>(rightBins[i])) / 2U);
-            const uint16_t targetLevel = fftBinToLevel(averagedBin);
+            const uint16_t targetLevel = fftBinToLevel(bins[i]);
 
             g_fftDisplayed[i] = applyVuBallistic(g_fftDisplayed[i], targetLevel, dt);
             updateVuPeak(g_fftDisplayed[i], g_fftPeakLevel[i], g_fftPeakHoldUntil[i], now, dt);
@@ -1148,7 +1147,7 @@ void ui_lvgl_update(const UiData &data, const float *selectedResponse, const flo
 
     if (g_activeUiMode == kUiModeFft)
     {
-        updateFftMeters(data.fftLeft, data.fftRight);
+        updateFftMeters(data.fftLeft);
         return;
     }
 

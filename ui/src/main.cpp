@@ -254,7 +254,7 @@ void loop()
     data.displayMode = registers.getDisplayMode();
     data.uiMode = registers.getUiMode();
     unpackVuMeterLevels(registers.getVuMeterPacked(), data.vuLeft, data.vuRight);
-    registers.copyFftBins(data.fftLeft, data.fftRight, 16);
+    registers.copyFftBins(data.fftLeft, 16);
     data.sampleRate = registers.getSampleRate();
     data.inputGain = registers.getInputGain();
     data.filterGain = registers.getFilterGain();
