@@ -147,7 +147,10 @@ AudioGain gain;
 AudioRMS rmsMeter;
 AudioPeak peakMeter;
 AudioFFT32 fft;
-// AudioSpectrumTD spectrum;
+AudioSpectrumTD spectrum;
+
+enum class AnalyzerMode { FFT, TD };
+static AnalyzerMode analyzerMode = AnalyzerMode::TD;
 
 ControlValues controlValues(filter);
 Display display;
@@ -318,9 +321,15 @@ void setup(void)
   filter.addReceiver(&rmsMeter);
   filter.addReceiver(&peakMeter);
   filter.addReceiver(&fft);
+  filter.addReceiver(&spectrum);
   filter.addReceiver(AudioController::getInstance());
   gain.setGain(1.0f);
   fft.setAmplitudeScale(AudioFFT32::AmplitudeScale::Decibels);
+  spectrum.configure(FFT_DISPLAY_BINS, 48000, 20.0, 20000.0,
+                     AudioSpectrumTD::Spacing::Logarithmic,
+                     AudioSpectrumTD::Detector::RMS,
+                     1.0, 20.0 * log10(5.0));  // linear gain x5
+  spectrum.setEnabled(true);
 
 #ifdef TESTMODE
   testTone.addReceiver(&gain);
@@ -517,6 +526,10 @@ void updateSampleRateStatus(uint32_t &lastSampleRate, bool &lastSampleRateStable
   {
     updateAllFilters();
     fft.setSampleRate(currentSampleRate);
+    spectrum.configure(FFT_DISPLAY_BINS, currentSampleRate, 20.0, 20000.0,
+                       AudioSpectrumTD::Spacing::Logarithmic,
+                       AudioSpectrumTD::Detector::RMS,
+                       1.0, 20.0 * log10(5.0));  // linear gain x5
   }
 
   lastSampleRate = currentSampleRate;
@@ -717,6 +730,22 @@ void loop(void)
   static time_t lastMeterUpdate = 0;
   time_t currentTime = millis();
 
+  // Serial command: 'f' = FFT analyzer, 't' = time-domain analyzer
+  if (Serial.available())
+  {
+    int ch = Serial.read();
+    if (ch == 'f')
+    {
+      analyzerMode = AnalyzerMode::FFT;
+      Serial.println("Analyzer: FFT");
+    }
+    else if (ch == 't')
+    {
+      analyzerMode = AnalyzerMode::TD;
+      Serial.println("Analyzer: Time-Domain");
+    }
+  }
+
   if (currentTime - lastMeterUpdate >= 50)
   {
     if (controlValues.getUIMode() == UI_MODE_SIMPLE)
@@ -727,17 +756,28 @@ void loop(void)
       display.commit();
     } else if (controlValues.getUIMode() == UI_MODE_FFT)
     {
-      sample_t fftLeft[FFT_DISPLAY_BINS];
-      sample_t fftRight[FFT_DISPLAY_BINS];
-      sample_t fftAvg[FFT_DISPLAY_BINS];
-      if (fft.doFFT(fftLeft, fftRight))
+      if (analyzerMode == AnalyzerMode::FFT)
       {
-        for (int i = 0; i < FFT_DISPLAY_BINS; i++)
+        sample_t fftLeft[FFT_DISPLAY_BINS];
+        sample_t fftRight[FFT_DISPLAY_BINS];
+        sample_t fftAvg[FFT_DISPLAY_BINS];
+        if (fft.doFFT(fftLeft, fftRight))
         {
-          fftAvg[i] = 0.5f * (fftLeft[i] + fftRight[i]);
+          for (int i = 0; i < FFT_DISPLAY_BINS; i++)
+            fftAvg[i] = 0.5f * (fftLeft[i] + fftRight[i]);
+          display.setFFTValues(fftAvg, true);
+          display.commit();
         }
-        Serial.println(fftAvg[0]);
-        display.setFFTValues(fftAvg, true);
+      }
+      else
+      {
+        float tdLeft[FFT_DISPLAY_BINS];
+        float tdRight[FFT_DISPLAY_BINS];
+        sample_t tdAvg[FFT_DISPLAY_BINS];
+        spectrum.getNormalizedBins(tdLeft, tdRight, FFT_DISPLAY_BINS);
+        for (int i = 0; i < FFT_DISPLAY_BINS; i++)
+          tdAvg[i] = 0.5f * (tdLeft[i] + tdRight[i]);
+        display.setFFTValues(tdAvg, true);
         display.commit();
       }
     }
