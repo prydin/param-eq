@@ -57,6 +57,10 @@ public:
         return audioInputI2S ? audioInputI2S->getNumStableIntervals() : 0;
     }
 
+    // Input alignment helpers (expose detection state for debug/status)
+    static uint8_t getInputShiftBits();
+    static bool isInputAlignmentLocked();
+
     static uint32_t getProcessCount() {
         return getInstance()->processCount;
     }

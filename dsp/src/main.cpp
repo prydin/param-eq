@@ -51,14 +51,13 @@
 #include "audio_pipeline/audio_rms.h"
 #include "audio_pipeline/audio_peak.h"
 #include "audio_pipeline/audio_controller.h"
-#include "audio_pipeline/audio_fft32.h"
 #include "audio_pipeline/audio_spectrum_td.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
 #include "display.h"
 
-// #define TESTMODE 1
+//#define TESTMODE 1
 
 #ifdef TESTMODE
 #include "audio_pipeline/test_tone.h"
@@ -137,7 +136,7 @@ OneButton uiModeButton(UI_MODE_PIN, true);
 
 AudioSquareWave waveform;
 #ifdef TESTMODE
-TestTone testTone(1000, 48000);
+TestTone testTone(100, 48000);
 #endif
 
 // The filters
@@ -146,11 +145,7 @@ AudioFilterBiquadFloat filter;
 AudioGain gain;
 AudioRMS rmsMeter;
 AudioPeak peakMeter;
-AudioFFT32 fft;
 AudioSpectrumTD spectrum;
-
-enum class AnalyzerMode { FFT, TD };
-static AnalyzerMode analyzerMode = AnalyzerMode::TD;
 
 ControlValues controlValues(filter);
 Display display;
@@ -315,16 +310,21 @@ void setup(void)
 {
   Serial.begin(115000);
 
+  gain.setTimingName("gain");
+  filter.setTimingName("filter_biquad");
+  rmsMeter.setTimingName("rms");
+  peakMeter.setTimingName("peak");
+  spectrum.setTimingName("spectrum_td");
+  AudioController::getInstance()->setTimingName("audio_controller");
+
   // Build audio pipeline
   // Source -> Gain -> Filter -> I2S
   gain.addReceiver(&filter);
   filter.addReceiver(&rmsMeter);
   filter.addReceiver(&peakMeter);
-  filter.addReceiver(&fft);
   filter.addReceiver(&spectrum);
   filter.addReceiver(AudioController::getInstance());
   gain.setGain(1.0f);
-  fft.setAmplitudeScale(AudioFFT32::AmplitudeScale::Decibels);
   spectrum.configure(FFT_DISPLAY_BINS, 48000, 20.0, 20000.0,
                      AudioSpectrumTD::Spacing::Logarithmic,
                      AudioSpectrumTD::Detector::RMS,
@@ -525,7 +525,6 @@ void updateSampleRateStatus(uint32_t &lastSampleRate, bool &lastSampleRateStable
   if (currentSampleRateStable)
   {
     updateAllFilters();
-    fft.setSampleRate(currentSampleRate);
     spectrum.configure(FFT_DISPLAY_BINS, currentSampleRate, 20.0, 20000.0,
                        AudioSpectrumTD::Spacing::Logarithmic,
                        AudioSpectrumTD::Detector::RMS,
@@ -551,12 +550,39 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
   }
 
   Serial.println("----- Status -----");
+  float avgCpuLoadPct = Timers::GetCpuLoad() * 100.0f;
+  float peakCpuLoadPct = 0.0f;
+  float avgPeriod = Timers::GetAvgPeriod();
+  float avgProcUs = Timers::GetAvg(Timers::TIMER_TOTAL);
+  float peakProcUs = Timers::GetPeak(Timers::TIMER_TOTAL);
+  const float cpuHz = 600000000.0f; // Teensy 4.x nominal core clock
+  float avgCycles = avgProcUs * (cpuHz / 1000000.0f);
+  float peakCycles = peakProcUs * (cpuHz / 1000000.0f);
+  float budgetCycles = avgPeriod * (cpuHz / 1000000.0f);
+  float avgHeadroomPct = 0.0f;
+  if (avgPeriod > 0.0f)
+  {
+    peakCpuLoadPct = (Timers::GetPeak(Timers::TIMER_TOTAL) / avgPeriod) * 100.0f;
+    avgHeadroomPct = ((avgPeriod - avgProcUs) / avgPeriod) * 100.0f;
+  }
   Serial.printf(
-      "CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s, stable intervals: %u\n",
-      Timers::GetCpuLoad() * 100.0f,
+      "CPU Load avg: %.2f%%, peak: %.2f%%, Sample rate: %u Hz, stable: %s, stable intervals: %u, inputAlign: %s (%u-bit)\n",
+      avgCpuLoadPct,
+      peakCpuLoadPct,
       AudioController::getStandardizedSampleRate(),
       AudioController::isSampleRateStable() ? "true" : "false",
-      AudioController::getNumStableIntervals());
+      AudioController::getNumStableIntervals(),
+      AudioController::isInputAlignmentLocked() ? "locked" : "unlocked",
+      (unsigned)AudioController::getInputShiftBits());
+  Serial.printf(
+      "Frame timing us (avg/peak/budget): %.2f / %.2f / %.2f, cycles (avg/peak/budget): %.0f / %.0f / %.0f, avg headroom: %.2f%%\n",
+      avgProcUs,
+      peakProcUs,
+      avgPeriod,
+      avgCycles,
+      peakCycles,
+      budgetCycles,
+      avgHeadroomPct);
   nextStatusPrint = currentTime + 2000;
   Serial.printf("RMS Level: %f, / %f, peak: %f / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight(), peakMeter.getPeakLeft(), peakMeter.getPeakRight());
   if (controlValues.getUIMode() != UI_MODE_SIMPLE)
@@ -569,6 +595,7 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
                 (unsigned long)(processCount - lastProcessCount));
   lastProcessCount = processCount;
   Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
+  AudioComponent::printTimingReport();
 }
 
 void updateClipIndicator()
@@ -730,22 +757,6 @@ void loop(void)
   static time_t lastMeterUpdate = 0;
   time_t currentTime = millis();
 
-  // Serial command: 'f' = FFT analyzer, 't' = time-domain analyzer
-  if (Serial.available())
-  {
-    int ch = Serial.read();
-    if (ch == 'f')
-    {
-      analyzerMode = AnalyzerMode::FFT;
-      Serial.println("Analyzer: FFT");
-    }
-    else if (ch == 't')
-    {
-      analyzerMode = AnalyzerMode::TD;
-      Serial.println("Analyzer: Time-Domain");
-    }
-  }
-
   if (currentTime - lastMeterUpdate >= 50)
   {
     if (controlValues.getUIMode() == UI_MODE_SIMPLE)
@@ -756,30 +767,14 @@ void loop(void)
       display.commit();
     } else if (controlValues.getUIMode() == UI_MODE_FFT)
     {
-      if (analyzerMode == AnalyzerMode::FFT)
-      {
-        sample_t fftLeft[FFT_DISPLAY_BINS];
-        sample_t fftRight[FFT_DISPLAY_BINS];
-        sample_t fftAvg[FFT_DISPLAY_BINS];
-        if (fft.doFFT(fftLeft, fftRight))
-        {
-          for (int i = 0; i < FFT_DISPLAY_BINS; i++)
-            fftAvg[i] = 0.5f * (fftLeft[i] + fftRight[i]);
-          display.setFFTValues(fftAvg, true);
-          display.commit();
-        }
-      }
-      else
-      {
-        float tdLeft[FFT_DISPLAY_BINS];
-        float tdRight[FFT_DISPLAY_BINS];
-        sample_t tdAvg[FFT_DISPLAY_BINS];
-        spectrum.getNormalizedBins(tdLeft, tdRight, FFT_DISPLAY_BINS);
-        for (int i = 0; i < FFT_DISPLAY_BINS; i++)
-          tdAvg[i] = 0.5f * (tdLeft[i] + tdRight[i]);
-        display.setFFTValues(tdAvg, true);
-        display.commit();
-      }
+      float tdLeft[FFT_DISPLAY_BINS];
+      float tdRight[FFT_DISPLAY_BINS];
+      sample_t tdAvg[FFT_DISPLAY_BINS];
+      spectrum.getNormalizedBins(tdLeft, tdRight, FFT_DISPLAY_BINS);
+      for (int i = 0; i < FFT_DISPLAY_BINS; i++)
+        tdAvg[i] = 0.5f * (tdLeft[i] + tdRight[i]);
+      display.setFFTValues(tdAvg, true);
+      display.commit();
     }
     lastMeterUpdate = currentTime;
   }

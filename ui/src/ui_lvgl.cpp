@@ -49,8 +49,14 @@ namespace
     constexpr lv_coord_t kFftFrameWidth = 304;
     constexpr lv_coord_t kFftFrameHeight = 224;
     constexpr lv_coord_t kFftTrackX = 12;
-    constexpr lv_coord_t kFftTrackY = 24;
-    constexpr lv_coord_t kFftTrackHeight = 182;
+    constexpr lv_coord_t kFftTrackY = 8;
+    constexpr lv_coord_t kFftTrackHeight = 166;
+    constexpr lv_coord_t kFftScaleY = kFftFrameY + kFftTrackY + kFftTrackHeight + 10;
+    constexpr lv_coord_t kFftInfoY = kFftScaleY + 14;
+    constexpr lv_coord_t kFftInfoX = kFftFrameX + kFftTrackX;
+    constexpr lv_coord_t kFftInfoWidth = kFftFrameWidth - (2 * kFftTrackX);
+    constexpr lv_coord_t kFftInfoColWidth = kFftInfoWidth / 3;
+    constexpr uint8_t kFftScaleTickCount = 5;
     constexpr lv_coord_t kFftBarGroupGap = 2;
     constexpr uint32_t kVuAttackMs = 2;
     constexpr uint32_t kVuReleaseMs = 210;
@@ -97,6 +103,12 @@ namespace
     lv_obj_t *g_fftRed[kFftBinCount] = {};
     lv_obj_t *g_fftGlow[kFftBinCount] = {};
     lv_obj_t *g_fftPeak[kFftBinCount] = {};
+    lv_obj_t *g_fftScaleAxis = nullptr;
+    lv_obj_t *g_fftScaleLabels[kFftScaleTickCount] = {};
+    lv_obj_t *g_fftInfoFs = nullptr;
+    lv_obj_t *g_fftInfoIn = nullptr;
+    lv_obj_t *g_fftInfoOut = nullptr;
+    const uint32_t g_fftScaleFrequencies[kFftScaleTickCount] = {2U, 20U, 200U, 2000U, 20000U};
     uint32_t g_activeUiMode = kUiModeDetailed;
 
     lv_obj_t *g_valueFs = nullptr;
@@ -121,6 +133,7 @@ namespace
     uint16_t g_fftPeakLevel[kFftBinCount] = {};
     uint32_t g_fftPeakHoldUntil[kFftBinCount] = {};
     uint32_t g_lastFftAnimMs = 0;
+    uint32_t g_lastValidSampleRate = 44100;
 
     uint32_t g_lastTickMs = 0;
 
@@ -656,6 +669,111 @@ namespace
         }
     }
 
+    void updateFftFrequencyScale(uint32_t sampleRate)
+    {
+        if (g_fftScaleLabels[0] == nullptr)
+        {
+            return;
+        }
+
+        uint32_t effectiveSampleRate = sampleRate;
+        if (effectiveSampleRate >= 4U)
+        {
+            g_lastValidSampleRate = effectiveSampleRate;
+        }
+        else
+        {
+            effectiveSampleRate = g_lastValidSampleRate;
+        }
+
+        const float axisMin = kMinGraphFrequency;
+        float axisMax = 0.5f * static_cast<float>(effectiveSampleRate);
+        if (axisMax > kMaxGraphFrequency)
+        {
+            axisMax = kMaxGraphFrequency;
+        }
+        if (axisMax < axisMin)
+        {
+            axisMax = axisMin;
+        }
+
+        const float minLog = log10f(axisMin);
+        const float maxLog = log10f(axisMax);
+        const float logSpan = maxLog - minLog;
+        const lv_coord_t axisLeft = kFftFrameX + kFftTrackX;
+        const lv_coord_t axisWidth = kFftFrameWidth - (2 * kFftTrackX);
+
+        for (uint8_t i = 0; i < kFftScaleTickCount; i++)
+        {
+            lv_obj_t *label = g_fftScaleLabels[i];
+            const float tickFreq = static_cast<float>(g_fftScaleFrequencies[i]);
+            if (tickFreq > axisMax || logSpan <= 0.0f)
+            {
+                lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+                continue;
+            }
+
+            char tickText[10];
+            snprintf(tickText, sizeof(tickText), "%lu", static_cast<unsigned long>(g_fftScaleFrequencies[i]));
+            lv_label_set_text(label, tickText);
+            lv_obj_clear_flag(label, LV_OBJ_FLAG_HIDDEN);
+
+            const float ratio = (log10f(tickFreq) - minLog) / logSpan;
+            lv_coord_t centerX = axisLeft + static_cast<lv_coord_t>(ratio * static_cast<float>(axisWidth - 1));
+
+            lv_obj_update_layout(label);
+            const lv_coord_t labelWidth = lv_obj_get_width(label);
+            lv_coord_t labelX = centerX - (labelWidth / 2);
+            if (labelX < axisLeft)
+            {
+                labelX = axisLeft;
+            }
+
+            const lv_coord_t maxLabelX = axisLeft + axisWidth - labelWidth;
+            if (labelX > maxLabelX)
+            {
+                labelX = maxLabelX;
+            }
+
+            lv_obj_set_pos(label, labelX, kFftScaleY);
+        }
+    }
+
+    void styleFftInfoLabel(lv_obj_t *obj, lv_text_align_t align)
+    {
+        lv_obj_set_style_text_color(obj, colorMetricValue(), 0);
+        lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_align(obj, align, 0);
+    }
+
+    void updateFftInfo(uint32_t sampleRate, float inputGain, float outputGain)
+    {
+        if (g_fftInfoFs == nullptr || g_fftInfoIn == nullptr || g_fftInfoOut == nullptr)
+        {
+            return;
+        }
+
+        char fsBuf[24];
+        if (sampleRate < 4U)
+        {
+            snprintf(fsBuf, sizeof(fsBuf), "Fs --");
+        }
+        else
+        {
+            snprintf(fsBuf, sizeof(fsBuf), "Fs %.1fk", sampleRate / 1000.0f);
+        }
+
+        char inBuf[24];
+        snprintf(inBuf, sizeof(inBuf), "In %+.1f", inputGain);
+
+        char outBuf[24];
+        snprintf(outBuf, sizeof(outBuf), "Out %+.1f", outputGain);
+
+        lv_label_set_text(g_fftInfoFs, fsBuf);
+        lv_label_set_text(g_fftInfoIn, inBuf);
+        lv_label_set_text(g_fftInfoOut, outBuf);
+    }
+
     void clampAndWriteSeries(lv_chart_series_t *series, const float *values, size_t count)
     {
         for (size_t i = 0; i < kChartPoints; i++)
@@ -775,11 +893,39 @@ void ui_lvgl_init(TFT_eSPI &tft)
     lv_obj_set_pos(fftFrame, kFftFrameX, kFftFrameY);
     lv_obj_set_size(fftFrame, kFftFrameWidth, kFftFrameHeight);
 
-    lv_obj_t *fftTitle = lv_label_create(g_modeFftRoot);
-    lv_obj_set_style_text_color(fftTitle, colorAxisText(), 0);
-    lv_obj_set_style_text_font(fftTitle, &lv_font_montserrat_8, 0);
-    lv_label_set_text(fftTitle, "FFT");
-    lv_obj_set_pos(fftTitle, kFftFrameX + 6, kFftFrameY + 2);
+
+
+    g_fftScaleAxis = lv_obj_create(g_modeFftRoot);
+    lv_obj_remove_style_all(g_fftScaleAxis);
+    lv_obj_set_style_bg_color(g_fftScaleAxis, colorAxisText(), 0);
+    lv_obj_set_style_bg_opa(g_fftScaleAxis, UI_LIGHT_MODE ? LV_OPA_50 : LV_OPA_40, 0);
+    lv_obj_set_size(g_fftScaleAxis, kFftFrameWidth - (2 * kFftTrackX), 1);
+    lv_obj_set_pos(g_fftScaleAxis, kFftFrameX + kFftTrackX, kFftScaleY - 3);
+
+    for (uint8_t i = 0; i < kFftScaleTickCount; i++)
+    {
+        g_fftScaleLabels[i] = lv_label_create(g_modeFftRoot);
+        lv_obj_set_style_text_color(g_fftScaleLabels[i], colorAxisText(), 0);
+        lv_obj_set_style_text_font(g_fftScaleLabels[i], &lv_font_montserrat_8, 0);
+        lv_label_set_text(g_fftScaleLabels[i], "");
+        lv_obj_add_flag(g_fftScaleLabels[i], LV_OBJ_FLAG_HIDDEN);
+    }
+
+    g_fftInfoFs = lv_label_create(g_modeFftRoot);
+    styleFftInfoLabel(g_fftInfoFs, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(g_fftInfoFs, kFftInfoX, kFftInfoY);
+    lv_obj_set_size(g_fftInfoFs, kFftInfoColWidth, LV_SIZE_CONTENT);
+
+    g_fftInfoIn = lv_label_create(g_modeFftRoot);
+    styleFftInfoLabel(g_fftInfoIn, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(g_fftInfoIn, kFftInfoX + kFftInfoColWidth, kFftInfoY);
+    lv_obj_set_size(g_fftInfoIn, kFftInfoColWidth, LV_SIZE_CONTENT);
+
+    g_fftInfoOut = lv_label_create(g_modeFftRoot);
+    styleFftInfoLabel(g_fftInfoOut, LV_TEXT_ALIGN_RIGHT);
+    lv_obj_set_pos(g_fftInfoOut, kFftInfoX + (2 * kFftInfoColWidth), kFftInfoY);
+    lv_obj_set_size(g_fftInfoOut, kFftInfoColWidth, LV_SIZE_CONTENT);
+    updateFftInfo(0, 0.0f, 0.0f);
 
     const lv_coord_t fftBarsAreaWidth = kFftFrameWidth - (2 * kFftTrackX);
     const lv_coord_t barWidth = (fftBarsAreaWidth - ((kFftBinCount - 1) * kFftBarGroupGap)) / kFftBinCount;
@@ -1147,6 +1293,8 @@ void ui_lvgl_update(const UiData &data, const float *selectedResponse, const flo
 
     if (g_activeUiMode == kUiModeFft)
     {
+        updateFftFrequencyScale(data.sampleRate);
+        updateFftInfo(data.sampleRate, data.inputGain, data.outputGain);
         updateFftMeters(data.fftLeft);
         return;
     }

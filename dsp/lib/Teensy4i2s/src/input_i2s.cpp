@@ -29,7 +29,7 @@
 #include "output_i2s.h"
 
 #define REQUIRED_STABLE_INTERVALS 10
-#define MAX_STABILITY_MISSES 3
+#define SAMPLE_RATE_COUNT_WINDOW_US 200000 // reduced from 1s to 200ms per request
 
 // set up two flip-flopped buffers, one is used for queueing up data for processing, the other receives data from I2S codec
 static int32_t dataL[AUDIO_BLOCK_SAMPLES*2] = {0};
@@ -41,8 +41,8 @@ static volatile uint8_t readyBufferIndex = 0;
 volatile uint32_t AudioInputI2S::interruptIntervalMicros = 1; // initialized to 1 to avoid division by zero on first read
 volatile uint32_t AudioInputI2S::numStableIntervals = 0;
 volatile uint32_t AudioInputI2S::lastTimeStamp = 0;
-static volatile uint32_t filteredIntervalMicros = 0;
-static volatile uint8_t stabilityMisses = 0;
+static volatile uint32_t countWindowStartMicros = 0;
+static volatile uint32_t countWindowInterrupts = 0;
 
 // Common sample rates for rounding to the neastest standard rate
 uint32_t standardSampleRates[] {
@@ -96,53 +96,42 @@ void AudioInputI2S::isr(void)
 	uint32_t rawInterval = currentTime - lastTimeStamp;
 	lastTimeStamp = currentTime;
 
-	// Skip startup/invalid interval values to avoid false instability at boot.
+	// Test estimator: count ISR events over a 1 second window.
+	// Each ISR handles AUDIO_BLOCK_SAMPLES frames, so:
+	// sampleRate ~= interruptsPerSecond * AUDIO_BLOCK_SAMPLES
 	if (rawInterval > 0 && rawInterval < 100000)
 	{
-		if (filteredIntervalMicros == 0)
+		if (countWindowStartMicros == 0)
 		{
-			filteredIntervalMicros = rawInterval;
-		}
-		else
-		{
-			// EWMA smoothing: fast enough for lock, robust against single delayed ISRs.
-			filteredIntervalMicros = (filteredIntervalMicros * 7 + rawInterval) / 8;
+			countWindowStartMicros = currentTime;
+			countWindowInterrupts = 0;
 		}
 
-		interruptIntervalMicros = filteredIntervalMicros;
+		countWindowInterrupts++;
 
-		// Tolerance is max(20us, 2% of filtered interval).
-		uint32_t tolerance = filteredIntervalMicros / 50;
-		if (tolerance < 20)
+		uint32_t elapsed = currentTime - countWindowStartMicros;
+		if (elapsed >= SAMPLE_RATE_COUNT_WINDOW_US)
 		{
-			tolerance = 20;
-		}
+			uint32_t measuredRate = 0;
+			if (countWindowInterrupts > 0 && elapsed > 0)
+			{
+				uint64_t numerator = (uint64_t)countWindowInterrupts * (uint64_t)AUDIO_BLOCK_SAMPLES * 1000000ULL;
+				measuredRate = (uint32_t)((numerator + (elapsed / 2U)) / elapsed);
+			}
 
-		int32_t delta = abs((int32_t)rawInterval - (int32_t)filteredIntervalMicros);
-		if ((uint32_t)delta <= tolerance)
-		{
-			if (numStableIntervals < REQUIRED_STABLE_INTERVALS)
+			if (measuredRate > 0)
 			{
-				numStableIntervals++;
+				numStableIntervals = REQUIRED_STABLE_INTERVALS;
+				interruptIntervalMicros = (AUDIO_BLOCK_SAMPLES * 1000000U + (measuredRate / 2U)) / measuredRate;
 			}
-			if (stabilityMisses > 0)
+			else
 			{
-				stabilityMisses--;
+				numStableIntervals = 0;
 			}
-		}
-		else
-		{
-			if (stabilityMisses < MAX_STABILITY_MISSES)
-			{
-				stabilityMisses++;
-			}
-			if (stabilityMisses >= MAX_STABILITY_MISSES)
-			{
-				if (numStableIntervals > 0)
-				{
-					numStableIntervals--;
-				}
-			}
+
+			// Start a fresh counting window.
+			countWindowStartMicros = currentTime;
+			countWindowInterrupts = 0;
 		}
 	}
 	

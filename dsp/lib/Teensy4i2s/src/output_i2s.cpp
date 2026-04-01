@@ -149,9 +149,9 @@ void AudioOutputI2S::isr(void)
 			fillBuffers[1][i] = 0;
 		}
 	}
-	else if (Timers::GetCpuLoad() < 0.98)
+	else
 	{
-		// populate the next block - unless CPU is at or above 98%
+		// Temporary: always process next block, regardless of estimated CPU load.
 		i2sAudioCallback(dataInPtr, fillBuffers);
 	}
 

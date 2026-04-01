@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include <stddef.h>
+#include <arm_math.h>
 
 #include "audio_component.h"
 
@@ -88,14 +89,21 @@ private:
     float centerFrequencies[MAX_BINS] = {};
 
     // LP (upper edge) and HP (lower edge) coefficients per bin, two stages each.
-    Coefficients lpCoeff[MAX_BINS][XOVER_STAGES] = {};
-    Coefficients hpCoeff[MAX_BINS][XOVER_STAGES] = {};
     bool hasLP[MAX_BINS] = {};   // all bins except the last
     bool hasHP[MAX_BINS] = {};   // all bins except the first
 
-    // Filter state: [channel][bin][stage][z1/z2]
-    sample_t stateLP[AUDIO_CHANNELS][MAX_BINS][XOVER_STAGES][2] = {};
-    sample_t stateHP[AUDIO_CHANNELS][MAX_BINS][XOVER_STAGES][2] = {};
+    // CMSIS float biquad coefficients and states.
+    // Coeff layout per stage: [b0, b1, b2, -a1, -a2]
+    sample_t lpCoeffCmsis[MAX_BINS][XOVER_STAGES * 5] = {};
+    sample_t hpCoeffCmsis[MAX_BINS][XOVER_STAGES * 5] = {};
+    sample_t lpState[AUDIO_CHANNELS][MAX_BINS][XOVER_STAGES * 2] = {};
+    sample_t hpState[AUDIO_CHANNELS][MAX_BINS][XOVER_STAGES * 2] = {};
+    arm_biquad_cascade_df2T_instance_f32 lpInst[AUDIO_CHANNELS][MAX_BINS] = {};
+    arm_biquad_cascade_df2T_instance_f32 hpInst[AUDIO_CHANNELS][MAX_BINS] = {};
+
+    // Reused buffers to avoid large stack allocations in ISR context.
+    sample_t workA[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES] = {};
+    sample_t workB[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES] = {};
 
     float binsLeft[MAX_BINS] = {};
     float binsRight[MAX_BINS] = {};

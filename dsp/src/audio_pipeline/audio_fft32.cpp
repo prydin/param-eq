@@ -11,6 +11,11 @@ void AudioFFT32::process(AudioBuffer *block)
 {
     if (!block)
         return;
+    if (!isEnabled)
+    {
+        transmit(block);
+        return;
+    }
 
     int pos = writePos; // ISR is non-reentrant
     memcpy(&accumLeft[pos],  block->data[0], AUDIO_BLOCK_SAMPLES * sizeof(sample_t));
