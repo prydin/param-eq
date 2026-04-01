@@ -327,7 +327,7 @@ void setup(void)
   gain.setGain(1.0f);
   spectrum.configure(FFT_DISPLAY_BINS, 48000, 20.0, 20000.0,
                      AudioSpectrumTD::Spacing::Logarithmic,
-                     AudioSpectrumTD::Detector::RMS,
+                     AudioSpectrumTD::Detector::Peak,
                      1.0, 20.0 * log10(5.0));  // linear gain x5
   spectrum.setEnabled(true);
 
