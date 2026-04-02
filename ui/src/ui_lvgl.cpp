@@ -62,6 +62,9 @@ namespace
     constexpr uint32_t kVuReleaseMs = 210;
     constexpr uint32_t kVuPeakHoldMs = 220;
     constexpr uint32_t kVuPeakFallPerSecond = 24000;
+    constexpr uint32_t kFilterPopupHideMs = 3000;
+    constexpr lv_coord_t kFilterPopupWidth = 236;
+    constexpr lv_coord_t kFilterPopupHeight = 136;
     constexpr uint32_t kUiModeDetailed = 0;
     constexpr uint32_t kUiModeSimple = 1;
     constexpr uint32_t kUiModeFft = 2;
@@ -96,6 +99,9 @@ namespace
     lv_obj_t *g_simpleOutGainValue = nullptr;
     lv_obj_t *g_simpleInGainLabel = nullptr;
     lv_obj_t *g_simpleInGainValue = nullptr;
+    lv_obj_t *g_filterPopupFrame = nullptr;
+    lv_obj_t *g_filterPopupLabels[5] = {};
+    lv_obj_t *g_filterPopupValues[5] = {};
     lv_obj_t *g_fftTrack[kFftBinCount] = {};
     lv_obj_t *g_fftBgGreen[kFftBinCount] = {};
     lv_obj_t *g_fftBgRed[kFftBinCount] = {};
@@ -134,6 +140,15 @@ namespace
     uint32_t g_fftPeakHoldUntil[kFftBinCount] = {};
     uint32_t g_lastFftAnimMs = 0;
     uint32_t g_lastValidSampleRate = 44100;
+    uint32_t g_filterPopupHideAtMs = 0;
+    bool g_filterPopupVisible = false;
+
+    bool g_lastFilterStateValid = false;
+    uint8_t g_lastFilterType = 0;
+    uint8_t g_lastFilterIndex = 0;
+    float g_lastFilterFrequency = 0.0f;
+    float g_lastFilterGain = 0.0f;
+    float g_lastFilterQ = 0.0f;
 
     uint32_t g_lastTickMs = 0;
 
@@ -279,6 +294,142 @@ namespace
         else
         {
             snprintf(buf, len, "%4.1f", sampleRate / 1000.0f);
+        }
+    }
+
+    const char *filterTypeName(uint8_t filterType)
+    {
+        switch (filterType)
+        {
+        case 0:
+            return "LoSh";
+        case 1:
+            return "HiSh";
+        case 2:
+            return "Peak";
+        default:
+            return "Flat";
+        }
+    }
+
+    enum FilterPopupRow : uint8_t
+    {
+        kFilterPopupRowBand = 0,
+        kFilterPopupRowType,
+        kFilterPopupRowFreq,
+        kFilterPopupRowGain,
+        kFilterPopupRowQ,
+        kFilterPopupRowCount
+    };
+
+    bool floatChanged(float previous, float current, float threshold)
+    {
+        return fabsf(previous - current) > threshold;
+    }
+
+    bool trackFilterParameterChanges(const UiData &data)
+    {
+        if (!g_lastFilterStateValid)
+        {
+            g_lastFilterStateValid = true;
+            g_lastFilterType = data.filterType;
+            g_lastFilterIndex = data.filterIndex;
+            g_lastFilterFrequency = data.frequency;
+            g_lastFilterGain = data.filterGain;
+            g_lastFilterQ = data.q;
+            return false;
+        }
+
+        const bool changed =
+            (g_lastFilterType != data.filterType) ||
+            (g_lastFilterIndex != data.filterIndex) ||
+            floatChanged(g_lastFilterFrequency, data.frequency, 0.5f) ||
+            floatChanged(g_lastFilterGain, data.filterGain, 0.05f) ||
+            floatChanged(g_lastFilterQ, data.q, 0.05f);
+
+        g_lastFilterType = data.filterType;
+        g_lastFilterIndex = data.filterIndex;
+        g_lastFilterFrequency = data.frequency;
+        g_lastFilterGain = data.filterGain;
+        g_lastFilterQ = data.q;
+        return changed;
+    }
+
+    void hideFilterPopup()
+    {
+        if (g_filterPopupFrame == nullptr)
+        {
+            return;
+        }
+
+        lv_obj_add_flag(g_filterPopupFrame, LV_OBJ_FLAG_HIDDEN);
+        g_filterPopupVisible = false;
+    }
+
+    void showFilterPopup(const UiData &data)
+    {
+        if (g_filterPopupFrame == nullptr)
+        {
+            return;
+        }
+
+        char valueBuf[24];
+        if (g_filterPopupValues[kFilterPopupRowBand] != nullptr)
+        {
+            snprintf(valueBuf, sizeof(valueBuf), "%u", static_cast<unsigned>(data.filterIndex + 1));
+            lv_label_set_text(g_filterPopupValues[kFilterPopupRowBand], valueBuf);
+        }
+        if (g_filterPopupValues[kFilterPopupRowType] != nullptr)
+        {
+            lv_label_set_text(g_filterPopupValues[kFilterPopupRowType], filterTypeName(data.filterType));
+        }
+        if (g_filterPopupValues[kFilterPopupRowFreq] != nullptr)
+        {
+            snprintf(valueBuf, sizeof(valueBuf), "%.0f Hz", data.frequency);
+            lv_label_set_text(g_filterPopupValues[kFilterPopupRowFreq], valueBuf);
+        }
+        if (g_filterPopupValues[kFilterPopupRowGain] != nullptr)
+        {
+            snprintf(valueBuf, sizeof(valueBuf), "%+.1f dB", data.filterGain);
+            lv_label_set_text(g_filterPopupValues[kFilterPopupRowGain], valueBuf);
+        }
+        if (g_filterPopupValues[kFilterPopupRowQ] != nullptr)
+        {
+            snprintf(valueBuf, sizeof(valueBuf), "%.2f", data.q);
+            lv_label_set_text(g_filterPopupValues[kFilterPopupRowQ], valueBuf);
+        }
+
+        lv_obj_clear_flag(g_filterPopupFrame, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(g_filterPopupFrame);
+
+        g_filterPopupVisible = true;
+        g_filterPopupHideAtMs = millis() + kFilterPopupHideMs;
+    }
+
+    void updateFilterPopup(const UiData &data)
+    {
+        const bool popupMode = (g_activeUiMode == kUiModeSimple) || (g_activeUiMode == kUiModeFft);
+        const bool changed = trackFilterParameterChanges(data);
+
+        if (!popupMode)
+        {
+            hideFilterPopup();
+            return;
+        }
+
+        if (changed)
+        {
+            showFilterPopup(data);
+            return;
+        }
+
+        if (g_filterPopupVisible)
+        {
+            const int32_t remaining = static_cast<int32_t>(g_filterPopupHideAtMs - millis());
+            if (remaining <= 0)
+            {
+                hideFilterPopup();
+            }
         }
     }
 
@@ -888,6 +1039,50 @@ void ui_lvgl_init(TFT_eSPI &tft)
     lv_obj_set_pos(g_modeFftRoot, 0, 0);
     lv_obj_add_flag(g_modeFftRoot, LV_OBJ_FLAG_HIDDEN);
 
+    g_filterPopupFrame = lv_obj_create(scr);
+    lv_obj_remove_style_all(g_filterPopupFrame);
+    lv_obj_set_size(g_filterPopupFrame, kFilterPopupWidth, kFilterPopupHeight);
+    lv_obj_set_pos(g_filterPopupFrame,
+                   (kScreenWidth - kFilterPopupWidth) / 2,
+                   (kScreenHeight - kFilterPopupHeight) / 2);
+    lv_obj_set_style_bg_color(g_filterPopupFrame, colorMetricPanel(), 0);
+    lv_obj_set_style_bg_opa(g_filterPopupFrame, UI_LIGHT_MODE ? LV_OPA_90 : LV_OPA_80, 0);
+    lv_obj_set_style_border_color(g_filterPopupFrame, colorMetricBorder(), 0);
+    lv_obj_set_style_border_width(g_filterPopupFrame, 2, 0);
+    lv_obj_set_style_radius(g_filterPopupFrame, 3, 0);
+    lv_obj_set_style_pad_left(g_filterPopupFrame, 6, 0);
+    lv_obj_set_style_pad_right(g_filterPopupFrame, 6, 0);
+    lv_obj_set_style_pad_top(g_filterPopupFrame, 4, 0);
+    lv_obj_set_style_pad_bottom(g_filterPopupFrame, 4, 0);
+    lv_obj_clear_flag(g_filterPopupFrame, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(g_filterPopupFrame, LV_OBJ_FLAG_HIDDEN);
+
+    const char *popupRowLabels[kFilterPopupRowCount] = {"Band", "Type", "Freq", "Gain", "Q"};
+    const lv_coord_t rowLeft = 6;
+    const lv_coord_t rowTop = 5;
+    const lv_coord_t rowHeight = 23;
+    const lv_coord_t labelWidth = 62;
+    const lv_coord_t gap = 6;
+    const lv_coord_t popupContentWidth = kFilterPopupWidth - 12;
+    const lv_coord_t valueWidth = popupContentWidth - (2 * rowLeft) - labelWidth - gap;
+
+    for (uint8_t row = 0; row < kFilterPopupRowCount; row++)
+    {
+        const lv_coord_t y = rowTop + static_cast<lv_coord_t>(row) * (rowHeight + 1);
+
+        g_filterPopupLabels[row] = lv_label_create(g_filterPopupFrame);
+        styleSimpleGainLabel(g_filterPopupLabels[row]);
+        lv_label_set_text(g_filterPopupLabels[row], popupRowLabels[row]);
+        lv_obj_set_pos(g_filterPopupLabels[row], rowLeft, y + 2);
+        lv_obj_set_size(g_filterPopupLabels[row], labelWidth, rowHeight);
+
+        g_filterPopupValues[row] = lv_label_create(g_filterPopupFrame);
+        styleSimpleGainValue(g_filterPopupValues[row]);
+        lv_label_set_text(g_filterPopupValues[row], "-");
+        lv_obj_set_pos(g_filterPopupValues[row], rowLeft + labelWidth + gap, y);
+        lv_obj_set_size(g_filterPopupValues[row], valueWidth, rowHeight);
+    }
+
     lv_obj_t *fftFrame = lv_obj_create(g_modeFftRoot);
     styleSimpleFrame(fftFrame);
     lv_obj_set_pos(fftFrame, kFftFrameX, kFftFrameY);
@@ -1290,6 +1485,7 @@ void ui_lvgl_task()
 void ui_lvgl_update(const UiData &data, const float *selectedResponse, const float *combinedResponse, size_t pointCount)
 {
     setUiMode(data.uiMode);
+    updateFilterPopup(data);
 
     if (g_activeUiMode == kUiModeFft)
     {
