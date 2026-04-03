@@ -41,6 +41,7 @@ public:
   void setUIMode(int uiMode, bool force = false);
   void setVUMeterValue(float left, float right, bool force = false);
   void setFFTValues(const float *values, bool force = false);
+  void setUserInput(bool isUserInput, bool force = false);
   void pushInitialSettings(ControlValues &controlValues);
   void update(ControlValues &controlValues);
   void commit();

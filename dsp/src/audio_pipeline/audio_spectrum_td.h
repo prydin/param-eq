@@ -45,7 +45,7 @@ public:
     bool getEnabled() const { return isEnabled; }
 
     void getCenterFrequencies(float *out, size_t count) const;
-    void getNormalizedBins(float *left, float *right, size_t count) const;
+    void getNormalizedBins(float *bins, size_t count) const;
 
 private:
     struct Coefficients
@@ -105,6 +105,5 @@ private:
     sample_t workA[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES] = {};
     sample_t workB[AUDIO_CHANNELS][AUDIO_BLOCK_SAMPLES] = {};
 
-    float binsLeft[MAX_BINS] = {};
-    float binsRight[MAX_BINS] = {};
+    float binAccs[MAX_BINS] = {};
 };

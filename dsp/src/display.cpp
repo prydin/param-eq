@@ -40,7 +40,6 @@ void Display::sendRegister(uint8_t reg, uint32_t value, bool force)
   Wire.write(reg);
   Wire.write((uint8_t *)&value, sizeof(value));
   Wire.endTransmission();
-  delay(1);
   registerCache[reg] = value;
 }
 
@@ -144,8 +143,12 @@ void Display::setUIMode(int uiMode, bool force)
   sendRegister(REG_UI_MODE, htonl(uiMode), force);
 }
 
+void Display::setUserInput(bool isUserInput, bool force)
+{
+  sendRegister(REG_USER_INPUT, htonl(isUserInput ? 1 : 0), force);
+}
+
 void Display::commit()
 {
   sendRegister(REG_COMMIT, 1, true);
 }
-

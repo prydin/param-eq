@@ -28,7 +28,7 @@ AudioSpectrumTD::AudioSpectrumTD() : AudioComponent()
               kDefaultGainDb);
 }
 
-bool AudioSpectrumTD::configure(size_t bins,
+bool AudioSpectrumTD::configure(size_t numBins,
                                 double sampleRate,
                                 double minFrequency,
                                 double maxFrequency,
@@ -37,10 +37,10 @@ bool AudioSpectrumTD::configure(size_t bins,
                                 double /*q*/,
                                 double gainDb)
 {
-    if (bins == 0)
+    if (numBins == 0)
         return false;
-    if (bins > MAX_BINS)
-        bins = MAX_BINS;
+    if (numBins > MAX_BINS)
+        numBins = MAX_BINS;
     if (!std::isfinite(sampleRate) || sampleRate <= 1000.0)
         return false;
 
@@ -57,7 +57,7 @@ bool AudioSpectrumTD::configure(size_t bins,
     if (maxFrequency <= minFrequency)
         maxFrequency = std::min(nyquist * 0.98, std::max(minFrequency + 1.0, 1000.0));
 
-    binCount = bins;
+    binCount = numBins;
     spacingMode = spacing;
     detectorMode = detector;
 
@@ -76,7 +76,7 @@ bool AudioSpectrumTD::configure(size_t bins,
             ? pow(10.0, logMin + (logMax - logMin) * t)
             : minFrequency + (maxFrequency - minFrequency) * t;
         centerFrequencies[i] = static_cast<float>(center);
-        binsLeft[i] = binsRight[i] = 0.0f;
+        binAccs[i] = 0.0f;
     }
 
     for (size_t i = 0; i < binCount; ++i)
@@ -259,8 +259,7 @@ void AudioSpectrumTD::process(AudioBuffer *block)
         }
 
         monoValue = sanitizeLevel(monoValue * gainNormalization);
-        binsLeft[band] = binsLeft[band] * smoothing + monoValue * (1.0f - smoothing);
-        binsRight[band] = binsRight[band] * smoothing + monoValue * (1.0f - smoothing);
+        binAccs[band] = binAccs[band] * smoothing + monoValue * (1.0f - smoothing);
     }
 
     transmit(block);
@@ -278,21 +277,15 @@ void AudioSpectrumTD::getCenterFrequencies(float *out, size_t count) const
         out[i] = 0.0f;
 }
 
-void AudioSpectrumTD::getNormalizedBins(float *left, float *right, size_t count) const
+void AudioSpectrumTD::getNormalizedBins(float *bins, size_t count) const
 {
     if (count == 0)
         return;
     size_t n = std::min(count, binCount);
     noInterrupts();
-    if (left != nullptr)
-        memcpy(left, binsLeft, n * sizeof(float));
-    if (right != nullptr)
-        memcpy(right, binsRight, n * sizeof(float));
+    if (bins != nullptr)
+        memcpy(bins, binAccs, n * sizeof(float));
     interrupts();
-    if (left != nullptr)
-        for (size_t i = n; i < count; ++i)
-            left[i] = 0.0f;
-    if (right != nullptr)
-        for (size_t i = n; i < count; ++i)
-            right[i] = 0.0f;
+    for (size_t i = n; i < count; ++i)
+        bins[i] = 0.0f;
 }

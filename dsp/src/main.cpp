@@ -118,6 +118,9 @@
 #define DAC_INIT_DELAY_MS 200
 #define DAC_CHECK_PERIOD 5000
 
+// Meter update interval
+#define METER_UPDATE_INTERVAL_MS 50
+
 // DAC instance
 ES9039Q2M dac;
 
@@ -282,10 +285,16 @@ void clipDetected(bool clipped)
 
 void initDisplay()
 {
+  // Mark the initial settings a non-user input to avoid triggering any animations or highlights on the display.
+  display.setUserInput(false);
   display.setMasterGain(controlValues.getMasterGain());
   display.setVolume(controlValues.getVolume());
   display.setUIMode(controlValues.getUIMode());
   updateAllFilters();
+  display.commit();
+
+  // Anything from this point on is user input
+  display.setUserInput(true);
   display.commit();
 }
 
@@ -454,7 +463,7 @@ void setup(void)
 
   // Initial display update
   updateAllFilters();
-  delay(1000); // Wait for display to be fully initialized
+  delay(500); // Wait for display to be fully initialized
   initDisplay();
 }
 
@@ -742,7 +751,7 @@ void saveSettingsIfNeeded(time_t currentTime)
  * The function only updates filters when the frequency or filter type changes
  * to optimize performance.
  *
- * Supported filter types:
+   * Supported filter types:
  * - LOWSHELF: Low shelf filter with configurable frequency, gain, and Q
  * - HIGHSHELF: High shelf filter with configurable frequency, gain, and Q
  * - PEAKINGEQ: Peaking EQ filter with configurable frequency, Q, and gain
@@ -757,7 +766,7 @@ void loop(void)
   static time_t lastMeterUpdate = 0;
   time_t currentTime = millis();
 
-  if (currentTime - lastMeterUpdate >= 50)
+  if (currentTime - lastMeterUpdate >= METER_UPDATE_INTERVAL_MS)
   {
     if (controlValues.getUIMode() == UI_MODE_SIMPLE)
     {
@@ -767,13 +776,9 @@ void loop(void)
       display.commit();
     } else if (controlValues.getUIMode() == UI_MODE_FFT)
     {
-      float tdLeft[FFT_DISPLAY_BINS];
-      float tdRight[FFT_DISPLAY_BINS];
-      sample_t tdAvg[FFT_DISPLAY_BINS];
-      spectrum.getNormalizedBins(tdLeft, tdRight, FFT_DISPLAY_BINS);
-      for (int i = 0; i < FFT_DISPLAY_BINS; i++)
-        tdAvg[i] = 0.5f * (tdLeft[i] + tdRight[i]);
-      display.setFFTValues(tdAvg, true);
+      float fqBins[FFT_DISPLAY_BINS];
+      spectrum.getNormalizedBins(fqBins, FFT_DISPLAY_BINS);
+      display.setFFTValues(fqBins, true);
       display.commit();
     }
     lastMeterUpdate = currentTime;
