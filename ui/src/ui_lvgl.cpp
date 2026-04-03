@@ -411,7 +411,7 @@ namespace
         const bool popupMode = (g_activeUiMode == kUiModeSimple) || (g_activeUiMode == kUiModeFft);
         const bool changed = trackFilterParameterChanges(data);
 
-        if (!popupMode)
+        if (!popupMode || data.userInput == 0)
         {
             hideFilterPopup();
             return;

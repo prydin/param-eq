@@ -157,6 +157,7 @@ UiData makeDemoData(uint8_t step)
   UiData data = {};
   data.filterType = step % 3;
   data.filterIndex = step % FILTER_BANDS;
+  data.userInput = 1;
   data.displayMode = (step % 4 >= 2) ? DISPLAY_MODE_COMBINED : DISPLAY_MODE_INDIVIDUAL;
   data.sampleRate = 44100;
   data.inputGain = inputGains[idx];
@@ -251,10 +252,25 @@ void loop()
     UiData data = {};
     data.filterType = registers.getFilterType();
     data.filterIndex = registers.getFilterSelect();
+    data.userInput = registers.getUserInput();
     data.displayMode = registers.getDisplayMode();
     data.uiMode = registers.getUiMode();
-    unpackVuMeterLevels(registers.getVuMeterPacked(), data.vuLeft, data.vuRight);
+
+    if (!registers.takeVuMeterUpdate(data.vuLeft, data.vuRight))
+    {
+      unpackVuMeterLevels(registers.getVuMeterPacked(), data.vuLeft, data.vuRight);
+    }
+
     registers.copyFftBins(data.fftLeft, 16);
+    uint8_t fftAccum[16] = {};
+    if (registers.takeFftUpdate(fftAccum, 16))
+    {
+      for (int i = 0; i < 16; i++)
+      {
+        data.fftLeft[i] = fftAccum[i];
+      }
+    }
+
     data.sampleRate = registers.getSampleRate();
     data.inputGain = registers.getInputGain();
     data.filterGain = registers.getFilterGain();

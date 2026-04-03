@@ -48,7 +48,7 @@ static volatile uint32_t countWindowInterrupts = 0;
 uint32_t standardSampleRates[] {
 	8000, 11025, 12000, 16000, 22050, 24000,
 	32000, 44100, 48000, 88200, 96000, 176400,
-	192000, 384000
+	192000
 };
 
 DMAMEM __attribute__((aligned(32))) static uint64_t i2s_rx_buffer[AUDIO_BLOCK_SAMPLES*2];

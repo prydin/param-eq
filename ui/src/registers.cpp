@@ -14,6 +14,23 @@ void unpackFftWord(uint32_t word, uint8_t *dst, uint8_t wordIndex) {
     dst[base + 2U] = static_cast<uint8_t>((word >> 16) & 0xFFU);
     dst[base + 3U] = static_cast<uint8_t>((word >> 24) & 0xFFU);
 }
+
+void accumulateFftWordMax(uint32_t word, volatile uint8_t *dst, uint8_t wordIndex) {
+    const size_t base = static_cast<size_t>(wordIndex) * 4U;
+    if (base + 3U >= 16U) {
+        return;
+    }
+
+    const uint8_t b0 = static_cast<uint8_t>(word & 0xFFU);
+    const uint8_t b1 = static_cast<uint8_t>((word >> 8) & 0xFFU);
+    const uint8_t b2 = static_cast<uint8_t>((word >> 16) & 0xFFU);
+    const uint8_t b3 = static_cast<uint8_t>((word >> 24) & 0xFFU);
+
+    if (b0 > dst[base + 0U]) dst[base + 0U] = b0;
+    if (b1 > dst[base + 1U]) dst[base + 1U] = b1;
+    if (b2 > dst[base + 2U]) dst[base + 2U] = b2;
+    if (b3 > dst[base + 3U]) dst[base + 3U] = b3;
+}
 } // namespace
 
 void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
@@ -33,11 +50,23 @@ void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
             w.frequency = ntohf(value);
             break;
         case REG_VU_METER:
+        {
+            const uint32_t packed = ntohl(value);
+            const uint16_t left = static_cast<uint16_t>(packed >> 16);
+            const uint16_t right = static_cast<uint16_t>(packed & 0xFFFFU);
+
             noInterrupts();
-            vuMeterPacked = ntohl(value);
+            vuMeterPacked = packed;
+            if (left > vuMeterAccumLeft) {
+                vuMeterAccumLeft = left;
+            }
+            if (right > vuMeterAccumRight) {
+                vuMeterAccumRight = right;
+            }
             vuMeterDirty = true;
             interrupts();
             break;
+        }
         case REG_FILTER_Q:
             w.q = ntohf(value);
             break;
@@ -53,6 +82,9 @@ void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
         case REG_FILTER_TYPE:
             w.filterType = ntohl(value);
             break;
+        case REG_USER_INPUT:
+            w.userInput = ntohl(value);
+            break;
         case REG_FILTER_COEFF0:
         case REG_FILTER_COEFF1:
         case REG_FILTER_COEFF2:
@@ -64,8 +96,18 @@ void RegisterBank::updateRegister(uint8_t reg, uint32_t value) {
         case REG_FFT_DATA_L1:    
         case REG_FFT_DATA_L2:
         case REG_FFT_DATA_L3:
-            unpackFftWord(ntohl(value), w.fftLeft, reg - REG_FFT_DATA_L0);
-            break;        
+        {
+            const uint8_t wordIndex = reg - REG_FFT_DATA_L0;
+            const uint32_t unpackedWord = ntohl(value);
+
+            unpackFftWord(unpackedWord, w.fftLeft, wordIndex);
+
+            noInterrupts();
+            accumulateFftWordMax(unpackedWord, fftAccumLeft, wordIndex);
+            fftDirty = true;
+            interrupts();
+            break;
+        }
         case REG_DISPLAY_MODE:
             w.displayMode = ntohl(value);
             break;

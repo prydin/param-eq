@@ -175,6 +175,7 @@ void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
             buffer->data[ch][i] = v;
         }
     }
+    //Serial.println(buffer->data[0][0]); // Debug: print first sample of block
     
     // Process through the pipeline - this modifies buffer and eventually calls back to process()
     getInstance()->transmit(buffer);
