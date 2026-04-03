@@ -51,14 +51,13 @@
 #include "audio_pipeline/audio_rms.h"
 #include "audio_pipeline/audio_peak.h"
 #include "audio_pipeline/audio_controller.h"
-#include "audio_pipeline/audio_fft32.h"
 #include "audio_pipeline/audio_spectrum_td.h"
 #include "AcceleratedEncoder.h"
 #include "netconv.h"
 #include "persistence.h"
 #include "display.h"
 
-// #define TESTMODE 1
+//#define TESTMODE 1
 
 #ifdef TESTMODE
 #include "audio_pipeline/test_tone.h"
@@ -119,6 +118,9 @@
 #define DAC_INIT_DELAY_MS 200
 #define DAC_CHECK_PERIOD 5000
 
+// Meter update interval
+#define METER_UPDATE_INTERVAL_MS 50
+
 // DAC instance
 ES9039Q2M dac;
 
@@ -137,7 +139,7 @@ OneButton uiModeButton(UI_MODE_PIN, true);
 
 AudioSquareWave waveform;
 #ifdef TESTMODE
-TestTone testTone(1000, 48000);
+TestTone testTone(100, 48000);
 #endif
 
 // The filters
@@ -146,7 +148,6 @@ AudioFilterBiquadFloat filter;
 AudioGain gain;
 AudioRMS rmsMeter;
 AudioPeak peakMeter;
-AudioFFT32 fft;
 AudioSpectrumTD spectrum;
 
 ControlValues controlValues(filter);
@@ -284,10 +285,16 @@ void clipDetected(bool clipped)
 
 void initDisplay()
 {
+  // Mark the initial settings a non-user input to avoid triggering any animations or highlights on the display.
+  display.setUserInput(false);
   display.setMasterGain(controlValues.getMasterGain());
   display.setVolume(controlValues.getVolume());
   display.setUIMode(controlValues.getUIMode());
   updateAllFilters();
+  display.commit();
+
+  // Anything from this point on is user input
+  display.setUserInput(true);
   display.commit();
 }
 
@@ -312,15 +319,26 @@ void setup(void)
 {
   Serial.begin(115000);
 
+  gain.setTimingName("gain");
+  filter.setTimingName("filter_biquad");
+  rmsMeter.setTimingName("rms");
+  peakMeter.setTimingName("peak");
+  spectrum.setTimingName("spectrum_td");
+  AudioController::getInstance()->setTimingName("audio_controller");
+
   // Build audio pipeline
   // Source -> Gain -> Filter -> I2S
   gain.addReceiver(&filter);
   filter.addReceiver(&rmsMeter);
   filter.addReceiver(&peakMeter);
-  filter.addReceiver(&fft);
+  filter.addReceiver(&spectrum);
   filter.addReceiver(AudioController::getInstance());
   gain.setGain(1.0f);
-  fft.setAmplitudeScale(AudioFFT32::AmplitudeScale::Decibels);
+  spectrum.configure(FFT_DISPLAY_BINS, 48000, 20.0, 20000.0,
+                     AudioSpectrumTD::Spacing::Logarithmic,
+                     AudioSpectrumTD::Detector::Peak,
+                     1.0, 20.0 * log10(5.0));  // linear gain x5
+  spectrum.setEnabled(true);
 
 #ifdef TESTMODE
   testTone.addReceiver(&gain);
@@ -445,7 +463,7 @@ void setup(void)
 
   // Initial display update
   updateAllFilters();
-  delay(1000); // Wait for display to be fully initialized
+  delay(500); // Wait for display to be fully initialized
   initDisplay();
 }
 
@@ -516,7 +534,10 @@ void updateSampleRateStatus(uint32_t &lastSampleRate, bool &lastSampleRateStable
   if (currentSampleRateStable)
   {
     updateAllFilters();
-    fft.setSampleRate(currentSampleRate);
+    spectrum.configure(FFT_DISPLAY_BINS, currentSampleRate, 20.0, 20000.0,
+                       AudioSpectrumTD::Spacing::Logarithmic,
+                       AudioSpectrumTD::Detector::RMS,
+                       1.0, 20.0 * log10(5.0));  // linear gain x5
   }
 
   lastSampleRate = currentSampleRate;
@@ -538,12 +559,39 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
   }
 
   Serial.println("----- Status -----");
+  float avgCpuLoadPct = Timers::GetCpuLoad() * 100.0f;
+  float peakCpuLoadPct = 0.0f;
+  float avgPeriod = Timers::GetAvgPeriod();
+  float avgProcUs = Timers::GetAvg(Timers::TIMER_TOTAL);
+  float peakProcUs = Timers::GetPeak(Timers::TIMER_TOTAL);
+  const float cpuHz = 600000000.0f; // Teensy 4.x nominal core clock
+  float avgCycles = avgProcUs * (cpuHz / 1000000.0f);
+  float peakCycles = peakProcUs * (cpuHz / 1000000.0f);
+  float budgetCycles = avgPeriod * (cpuHz / 1000000.0f);
+  float avgHeadroomPct = 0.0f;
+  if (avgPeriod > 0.0f)
+  {
+    peakCpuLoadPct = (Timers::GetPeak(Timers::TIMER_TOTAL) / avgPeriod) * 100.0f;
+    avgHeadroomPct = ((avgPeriod - avgProcUs) / avgPeriod) * 100.0f;
+  }
   Serial.printf(
-      "CPU Load: %.2f%%, Sample rate: %u Hz, stable: %s, stable intervals: %u\n",
-      Timers::GetCpuLoad() * 100.0f,
+      "CPU Load avg: %.2f%%, peak: %.2f%%, Sample rate: %u Hz, stable: %s, stable intervals: %u, inputAlign: %s (%u-bit)\n",
+      avgCpuLoadPct,
+      peakCpuLoadPct,
       AudioController::getStandardizedSampleRate(),
       AudioController::isSampleRateStable() ? "true" : "false",
-      AudioController::getNumStableIntervals());
+      AudioController::getNumStableIntervals(),
+      AudioController::isInputAlignmentLocked() ? "locked" : "unlocked",
+      (unsigned)AudioController::getInputShiftBits());
+  Serial.printf(
+      "Frame timing us (avg/peak/budget): %.2f / %.2f / %.2f, cycles (avg/peak/budget): %.0f / %.0f / %.0f, avg headroom: %.2f%%\n",
+      avgProcUs,
+      peakProcUs,
+      avgPeriod,
+      avgCycles,
+      peakCycles,
+      budgetCycles,
+      avgHeadroomPct);
   nextStatusPrint = currentTime + 2000;
   Serial.printf("RMS Level: %f, / %f, peak: %f / %f\n", rmsMeter.getRMSLeft(), rmsMeter.getRMSRight(), peakMeter.getPeakLeft(), peakMeter.getPeakRight());
   if (controlValues.getUIMode() != UI_MODE_SIMPLE)
@@ -556,6 +604,7 @@ void printStatusIfNeeded(time_t currentTime, time_t &nextStatusPrint)
                 (unsigned long)(processCount - lastProcessCount));
   lastProcessCount = processCount;
   Serial.printf("DAC is %s\n", dac.getChipID() == 99 ? "alive" : "dead");
+  AudioComponent::printTimingReport();
 }
 
 void updateClipIndicator()
@@ -702,7 +751,7 @@ void saveSettingsIfNeeded(time_t currentTime)
  * The function only updates filters when the frequency or filter type changes
  * to optimize performance.
  *
- * Supported filter types:
+   * Supported filter types:
  * - LOWSHELF: Low shelf filter with configurable frequency, gain, and Q
  * - HIGHSHELF: High shelf filter with configurable frequency, gain, and Q
  * - PEAKINGEQ: Peaking EQ filter with configurable frequency, Q, and gain
@@ -717,27 +766,20 @@ void loop(void)
   static time_t lastMeterUpdate = 0;
   time_t currentTime = millis();
 
-  if (currentTime - lastMeterUpdate >= 10)
+  if (currentTime - lastMeterUpdate >= METER_UPDATE_INTERVAL_MS)
   {
     if (controlValues.getUIMode() == UI_MODE_SIMPLE)
     {
       display.setVUMeterValue(peakMeter.getPeakLeft(), peakMeter.getPeakRight());
+      //display.setVUMeterValue(rmsMeter.getRMSLeft(), rmsMeter.getRMSRight());
       peakMeter.reset();
       display.commit();
     } else if (controlValues.getUIMode() == UI_MODE_FFT)
     {
-      sample_t fftLeft[FFT_DISPLAY_BINS];
-      sample_t fftRight[FFT_DISPLAY_BINS];
-      time_t start = micros();
-      if (fft.doFFT(fftLeft, fftRight))
-      {
-        display.setFFTValuesLeft(fftLeft, true);
-        display.setFFTValuesRight(fftRight, true);
-        display.commit();
-        time_t end = micros();
-        Serial.printf("FFT display update time: %u us\n", end - start);
-
-      }
+      float fqBins[FFT_DISPLAY_BINS];
+      spectrum.getNormalizedBins(fqBins, FFT_DISPLAY_BINS);
+      display.setFFTValues(fqBins, true);
+      display.commit();
     }
     lastMeterUpdate = currentTime;
   }

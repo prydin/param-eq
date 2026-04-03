@@ -14,12 +14,38 @@ class RegisterBank {
                 return false;
             }
 
-            const uint32_t packedLevel = vuMeterPacked;
+            leftLevel = vuMeterAccumLeft;
+            rightLevel = vuMeterAccumRight;
+
+            vuMeterAccumLeft = 0;
+            vuMeterAccumRight = 0;
             vuMeterDirty = false;
             interrupts();
+            return true;
+        }
 
-            leftLevel = static_cast<uint16_t>(packedLevel >> 16);
-            rightLevel = static_cast<uint16_t>(packedLevel & 0xFFFFU);
+        bool takeFftUpdate(uint8_t *bins, size_t binCount) {
+            if (bins == nullptr || binCount == 0U) {
+                return false;
+            }
+
+            const size_t count = (binCount > 16U) ? 16U : binCount;
+
+            noInterrupts();
+            if (!fftDirty) {
+                interrupts();
+                return false;
+            }
+
+            for (size_t i = 0; i < count; i++) {
+                bins[i] = fftAccumLeft[i];
+            }
+            for (size_t i = 0; i < 16U; i++) {
+                fftAccumLeft[i] = 0;
+            }
+            fftDirty = false;
+            interrupts();
+
             return true;
         }
 
@@ -45,6 +71,7 @@ class RegisterBank {
         uint32_t getBypass() { return buffers[readBufferIndex].bypass; }
         uint32_t getReset() { return buffers[readBufferIndex].reset; }
         uint32_t getFilterType() { return buffers[readBufferIndex].filterType; }
+        uint32_t getUserInput() { return buffers[readBufferIndex].userInput; }
         float getFilterCoeff(uint8_t band, uint8_t index) { return buffers[readBufferIndex].filterCoeff[band][index]; }
         uint32_t getDisplayMode() { return buffers[readBufferIndex].displayMode; }
         uint32_t getUiMode() { return buffers[readBufferIndex].uiMode; }
@@ -54,13 +81,12 @@ class RegisterBank {
             interrupts();
             return packedLevel;
         }
-        void copyFftBins(uint8_t *leftBins, uint8_t *rightBins, size_t binCount) {
+        void copyFftBins(uint8_t *bins, size_t binCount) {
             const size_t count = (binCount > 16U) ? 16U : binCount;
             const RegisterState &r = buffers[readBufferIndex];
 
             for (size_t i = 0; i < count; i++) {
-                leftBins[i] = r.fftLeft[i];
-                rightBins[i] = r.fftRight[i];
+                bins[i] = r.fftLeft[i];
             }
         }
 
@@ -76,14 +102,11 @@ class RegisterBank {
             uint32_t bypass = 0;
             uint32_t reset = 0;
             uint32_t filterType = 0;
+            uint32_t userInput = 0;
             float filterCoeff[FILTER_BANDS][5] = {};
             uint32_t displayMode = 0;
             uint32_t uiMode = 1;
             uint8_t fftLeft[16] = {};
-            uint8_t fftRight[16] = {};
-            uint32_t fftLeftWords[5] = {};
-            uint32_t fftRightWords[4] = {};
-            bool fftLeftUsesReg10 = false;
         };
 
         RegisterState buffers[2] = {};
@@ -91,5 +114,9 @@ class RegisterBank {
         volatile uint8_t writeBufferIndex = 1;
         volatile bool ready = false;
         volatile uint32_t vuMeterPacked = 0;
+        volatile uint16_t vuMeterAccumLeft = 0;
+        volatile uint16_t vuMeterAccumRight = 0;
         volatile bool vuMeterDirty = false;
+        volatile uint8_t fftAccumLeft[16] = {};
+        volatile bool fftDirty = false;
 };

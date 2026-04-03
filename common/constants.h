@@ -28,10 +28,7 @@
 #define REG_FFT_DATA_L1 0x12
 #define REG_FFT_DATA_L2 0x13
 #define REG_FFT_DATA_L3 0x14
-#define REG_FFT_DATA_R0 0x15
-#define REG_FFT_DATA_R1 0x16
-#define REG_FFT_DATA_R2 0x17
-#define REG_FFT_DATA_R3 0x18
+#define REG_USER_INPUT 0x15
 
 #define REG_COMMIT 0xff
 

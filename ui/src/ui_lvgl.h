@@ -8,12 +8,12 @@ class TFT_eSPI;
 struct UiData {
   uint8_t filterType;
   uint8_t filterIndex;
+  uint32_t userInput;
   uint32_t displayMode;
   uint32_t uiMode;
   uint16_t vuLeft;
   uint16_t vuRight;
   uint8_t fftLeft[16];
-  uint8_t fftRight[16];
 
   uint32_t sampleRate;
   float inputGain;

@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: MIT
 #include "audio_spectrum_td.h"
 
+
 #include <algorithm>
 #include <cmath>
 #include <string.h>
+#include "../../common/constants.h"
 
 namespace
 {
 constexpr double kMinLogFrequency = 1.0;
 constexpr double kDefaultMinFrequency = 20.0;
 constexpr double kDefaultMaxFrequency = 20000.0;
-constexpr double kDefaultQ = 2.0;
 constexpr double kDefaultGainDb = 12.0;
-constexpr float kEpsilon = 1e-12f;
 }
 
 AudioSpectrumTD::AudioSpectrumTD() : AudioComponent()
@@ -24,192 +24,242 @@ AudioSpectrumTD::AudioSpectrumTD() : AudioComponent()
               kDefaultMaxFrequency,
               Spacing::Logarithmic,
               Detector::RMS,
-              kDefaultQ,
+              1.0,
               kDefaultGainDb);
 }
 
-bool AudioSpectrumTD::configure(size_t bins,
+bool AudioSpectrumTD::configure(size_t numBins,
                                 double sampleRate,
                                 double minFrequency,
                                 double maxFrequency,
                                 Spacing spacing,
                                 Detector detector,
-                                double q,
+                                double /*q*/,
                                 double gainDb)
 {
-    if (bins == 0)
-    {
+    if (numBins == 0)
         return false;
-    }
-    if (bins > MAX_BINS)
-    {
-        bins = MAX_BINS;
-    }
+    if (numBins > MAX_BINS)
+        numBins = MAX_BINS;
     if (!std::isfinite(sampleRate) || sampleRate <= 1000.0)
-    {
         return false;
-    }
-    if (!std::isfinite(q) || q <= 0.0)
-    {
-        q = kDefaultQ;
-    }
-    (void)gainDb;
+
+    gainNormalization = powf(10.0f, (float)gainDb / 20.0f);
 
     const double nyquist = sampleRate * 0.5;
     if (!std::isfinite(minFrequency))
-    {
         minFrequency = kDefaultMinFrequency;
-    }
     if (!std::isfinite(maxFrequency))
-    {
         maxFrequency = kDefaultMaxFrequency;
-    }
 
     minFrequency = std::max(minFrequency, spacing == Spacing::Logarithmic ? kMinLogFrequency : 0.0);
     maxFrequency = std::min(maxFrequency, nyquist * 0.98);
     if (maxFrequency <= minFrequency)
-    {
         maxFrequency = std::min(nyquist * 0.98, std::max(minFrequency + 1.0, 1000.0));
-    }
 
-    binCount = bins;
+    binCount = numBins;
     spacingMode = spacing;
     detectorMode = detector;
-    gainNormalization = 1.0f;
 
-    memset(state, 0, sizeof(state));
+    memset(lpState, 0, sizeof(lpState));
+    memset(hpState, 0, sizeof(hpState));
+    memset(lpCoeffCmsis, 0, sizeof(lpCoeffCmsis));
+    memset(hpCoeffCmsis, 0, sizeof(hpCoeffCmsis));
+
+    const double logMin = log10(std::max(minFrequency, kMinLogFrequency));
+    const double logMax = log10(std::max(maxFrequency, kMinLogFrequency));
 
     for (size_t i = 0; i < binCount; ++i)
     {
         double t = (binCount > 1) ? static_cast<double>(i) / static_cast<double>(binCount - 1) : 0.0;
-        double center = 0.0;
-        if (spacingMode == Spacing::Linear)
-        {
-            center = minFrequency + (maxFrequency - minFrequency) * t;
-        }
-        else
-        {
-            const double logMin = log10(std::max(minFrequency, kMinLogFrequency));
-            const double logMax = log10(std::max(maxFrequency, kMinLogFrequency));
-            center = pow(10.0, logMin + (logMax - logMin) * t);
-        }
-
-        Coefficients c;
-        if (!computeBandpassCoefficients(center, sampleRate, q, c))
-        {
-            return false;
-        }
-
+        double center = (spacingMode == Spacing::Logarithmic)
+            ? pow(10.0, logMin + (logMax - logMin) * t)
+            : minFrequency + (maxFrequency - minFrequency) * t;
         centerFrequencies[i] = static_cast<float>(center);
-        coeff[i] = c;
-        binsLeft[i] = 0.0f;
-        binsRight[i] = 0.0f;
+        binAccs[i] = 0.0f;
+    }
+
+    for (size_t i = 0; i < binCount; ++i)
+    {
+        hasLP[i] = (i < binCount - 1);
+        hasHP[i] = (i > 0);
+
+        if (hasLP[i])
+        {
+            Coefficients lp[XOVER_STAGES];
+            double fEdge = (spacingMode == Spacing::Logarithmic)
+                ? sqrt((double)centerFrequencies[i] * (double)centerFrequencies[i + 1])
+                : 0.5 * ((double)centerFrequencies[i] + (double)centerFrequencies[i + 1]);
+            fEdge = std::min(fEdge, nyquist * 0.98);
+            fEdge = std::max(fEdge, 1.0);
+            if (!computeXoverLP(fEdge, sampleRate, lp))
+                return false;
+
+            for (int s = 0; s < XOVER_STAGES; ++s)
+            {
+                const int base = s * 5;
+                lpCoeffCmsis[i][base + 0] = lp[s].b0;
+                lpCoeffCmsis[i][base + 1] = lp[s].b1;
+                lpCoeffCmsis[i][base + 2] = lp[s].b2;
+                lpCoeffCmsis[i][base + 3] = -lp[s].a1;
+                lpCoeffCmsis[i][base + 4] = -lp[s].a2;
+            }
+        }
+
+        if (hasHP[i])
+        {
+            Coefficients hp[XOVER_STAGES];
+            double fEdge = (spacingMode == Spacing::Logarithmic)
+                ? sqrt((double)centerFrequencies[i - 1] * (double)centerFrequencies[i])
+                : 0.5 * ((double)centerFrequencies[i - 1] + (double)centerFrequencies[i]);
+            fEdge = std::min(fEdge, nyquist * 0.98);
+            fEdge = std::max(fEdge, 1.0);
+            if (!computeXoverHP(fEdge, sampleRate, hp))
+                return false;
+
+            for (int s = 0; s < XOVER_STAGES; ++s)
+            {
+                const int base = s * 5;
+                hpCoeffCmsis[i][base + 0] = hp[s].b0;
+                hpCoeffCmsis[i][base + 1] = hp[s].b1;
+                hpCoeffCmsis[i][base + 2] = hp[s].b2;
+                hpCoeffCmsis[i][base + 3] = -hp[s].a1;
+                hpCoeffCmsis[i][base + 4] = -hp[s].a2;
+            }
+        }
+
+        for (int ch = 0; ch < AUDIO_CHANNELS; ++ch)
+        {
+            if (hasLP[i])
+            {
+                arm_biquad_cascade_df2T_init_f32(&lpInst[ch][i],
+                                                 XOVER_STAGES,
+                                                 lpCoeffCmsis[i],
+                                                 lpState[ch][i]);
+            }
+            if (hasHP[i])
+            {
+                arm_biquad_cascade_df2T_init_f32(&hpInst[ch][i],
+                                                 XOVER_STAGES,
+                                                 hpCoeffCmsis[i],
+                                                 hpState[ch][i]);
+            }
+        }
     }
 
     return true;
 }
 
-bool AudioSpectrumTD::computeBandpassCoefficients(double frequency,
-                                                  double sampleRate,
-                                                  double q,
-                                                  Coefficients &out) const
+bool AudioSpectrumTD::computeBiquadBW(double cutoffHz, double sampleRate,
+                                      double q, bool isLP, Coefficients &out)
 {
-    if (!std::isfinite(frequency) || !std::isfinite(sampleRate) || frequency <= 0.0 || sampleRate <= 0.0)
-    {
+    if (cutoffHz <= 0.0 || cutoffHz >= sampleRate * 0.5 || sampleRate <= 0.0)
         return false;
+    const double K = tan(M_PI * cutoffHz / sampleRate);
+    const double K2 = K * K;
+    const double D = K2 + K / q + 1.0;
+    const double invD = 1.0 / D;
+    out.a1 = static_cast<sample_t>(2.0 * (K2 - 1.0) * invD);
+    out.a2 = static_cast<sample_t>((K2 - K / q + 1.0) * invD);
+    if (isLP)
+    {
+        out.b0 = out.b2 = static_cast<sample_t>(K2 * invD);
+        out.b1 = static_cast<sample_t>(2.0 * K2 * invD);
     }
-
-    const double w0 = frequency * (TWO_PI / sampleRate);
-    const double sinW0 = sin(w0);
-    const double alpha = sinW0 / (q * 2.0);
-    const double cosW0 = cos(w0);
-    const double scale = 1.0 / (1.0 + alpha);
-
-    out.b0 = static_cast<sample_t>(alpha * scale);
-    out.b1 = static_cast<sample_t>(0.0);
-    out.b2 = static_cast<sample_t>((-alpha) * scale);
-    out.a1 = static_cast<sample_t>((-2.0 * cosW0) * scale);
-    out.a2 = static_cast<sample_t>((1.0 - alpha) * scale);
+    else
+    {
+        out.b0 = out.b2 = static_cast<sample_t>(invD);
+        out.b1 = static_cast<sample_t>(-2.0 * invD);
+    }
     return true;
+}
+
+bool AudioSpectrumTD::computeXoverLP(double cutoffHz, double sampleRate,
+                                     Coefficients out[XOVER_STAGES]) const
+{
+    return computeBiquadBW(cutoffHz, sampleRate, kBWQ0, true, out[0]) &&
+           computeBiquadBW(cutoffHz, sampleRate, kBWQ1, true, out[1]);
+}
+
+bool AudioSpectrumTD::computeXoverHP(double cutoffHz, double sampleRate,
+                                     Coefficients out[XOVER_STAGES]) const
+{
+    return computeBiquadBW(cutoffHz, sampleRate, kBWQ0, false, out[0]) &&
+           computeBiquadBW(cutoffHz, sampleRate, kBWQ1, false, out[1]);
 }
 
 float AudioSpectrumTD::sanitizeLevel(float value)
 {
     if (!std::isfinite(value) || value < 0.0f)
-    {
         return 0.0f;
-    }
     return value;
 }
 
 void AudioSpectrumTD::process(AudioBuffer *block)
 {
     if (block == nullptr)
-    {
         return;
-    }
     if (!isEnabled || binCount == 0)
     {
         transmit(block);
         return;
     }
 
+    // Build mono analysis input once per block to cut analyzer work roughly in half.
+    for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
+    {
+        workA[1][i] = 0.5f * (block->data[0][i] + block->data[1][i]);
+    }
+
     for (size_t band = 0; band < binCount; ++band)
     {
-        float leftPeak = 0.0f;
-        float rightPeak = 0.0f;
-        double leftEnergy = 0.0;
-        double rightEnergy = 0.0;
+        float monoPeak = 0.0f;
+        double monoEnergy = 0.0;
 
-        sample_t z1L = state[0][band][0];
-        sample_t z2L = state[0][band][1];
-        sample_t z1R = state[1][band][0];
-        sample_t z2R = state[1][band][1];
-        const Coefficients &c = coeff[band];
+        const bool applyHP = hasHP[band];
+        const bool applyLP = hasLP[band];
+
+        sample_t *bandOut = nullptr;
+
+        memcpy(workA[0], workA[1], AUDIO_BLOCK_SAMPLES * sizeof(sample_t));
+        sample_t *cur = workA[0];
+        sample_t *nxt = workB[0];
+        if (applyHP)
+        {
+            arm_biquad_cascade_df2T_f32(&hpInst[0][band], cur, nxt, AUDIO_BLOCK_SAMPLES);
+            sample_t *tmp = cur;
+            cur = nxt;
+            nxt = tmp;
+        }
+        if (applyLP)
+        {
+            arm_biquad_cascade_df2T_f32(&lpInst[0][band], cur, nxt, AUDIO_BLOCK_SAMPLES);
+            sample_t *tmp = cur;
+            cur = nxt;
+            nxt = tmp;
+        }
+        bandOut = cur;
 
         for (size_t i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
         {
-            const sample_t xL = block->data[0][i];
-            const sample_t yL = c.b0 * xL + z1L;
-            z1L = c.b1 * xL - c.a1 * yL + z2L;
-            z2L = c.b2 * xL - c.a2 * yL;
-
-            const sample_t xR = block->data[1][i];
-            const sample_t yR = c.b0 * xR + z1R;
-            z1R = c.b1 * xR - c.a1 * yR + z2R;
-            z2R = c.b2 * xR - c.a2 * yR;
-
-            const float absLeft = fabsf(static_cast<float>(yL));
-            const float absRight = fabsf(static_cast<float>(yR));
-            leftPeak = std::max(leftPeak, absLeft);
-            rightPeak = std::max(rightPeak, absRight);
-            leftEnergy += static_cast<double>(yL) * static_cast<double>(yL);
-            rightEnergy += static_cast<double>(yR) * static_cast<double>(yR);
+            const float x = bandOut[i];
+            const float absX = fabsf(x);
+            monoPeak = std::max(monoPeak, absX);
+            monoEnergy += static_cast<double>(x) * static_cast<double>(x);
         }
 
-        state[0][band][0] = z1L;
-        state[0][band][1] = z2L;
-        state[1][band][0] = z1R;
-        state[1][band][1] = z2R;
-
-        float leftValue = 0.0f;
-        float rightValue = 0.0f;
+        float monoValue = 0.0f;
         if (detectorMode == Detector::Peak)
         {
-            leftValue = leftPeak;
-            rightValue = rightPeak;
+            monoValue = monoPeak;
         }
         else
         {
-            leftValue = sqrtf(static_cast<float>(leftEnergy / AUDIO_BLOCK_SAMPLES));
-            rightValue = sqrtf(static_cast<float>(rightEnergy / AUDIO_BLOCK_SAMPLES));
+            monoValue = sqrtf(static_cast<float>(monoEnergy / AUDIO_BLOCK_SAMPLES));
         }
 
-        leftValue = sanitizeLevel(leftValue * gainNormalization);
-        rightValue = sanitizeLevel(rightValue * gainNormalization);
-
-        binsLeft[band] = binsLeft[band] * smoothing + leftValue * (1.0f - smoothing);
-        binsRight[band] = binsRight[band] * smoothing + rightValue * (1.0f - smoothing);
+        monoValue = sanitizeLevel(monoValue * gainNormalization);
+        binAccs[band] = binAccs[band] * smoothing + monoValue * (1.0f - smoothing);
     }
 
     transmit(block);
@@ -218,52 +268,24 @@ void AudioSpectrumTD::process(AudioBuffer *block)
 void AudioSpectrumTD::getCenterFrequencies(float *out, size_t count) const
 {
     if (out == nullptr || count == 0)
-    {
         return;
-    }
-
     size_t n = std::min(count, binCount);
     noInterrupts();
     memcpy(out, centerFrequencies, n * sizeof(float));
     interrupts();
-
     for (size_t i = n; i < count; ++i)
-    {
         out[i] = 0.0f;
-    }
 }
 
-void AudioSpectrumTD::getNormalizedBins(float *left, float *right, size_t count) const
+void AudioSpectrumTD::getNormalizedBins(float *bins, size_t count) const
 {
     if (count == 0)
-    {
         return;
-    }
-
     size_t n = std::min(count, binCount);
     noInterrupts();
-    if (left != nullptr)
-    {
-        memcpy(left, binsLeft, n * sizeof(float));
-    }
-    if (right != nullptr)
-    {
-        memcpy(right, binsRight, n * sizeof(float));
-    }
+    if (bins != nullptr)
+        memcpy(bins, binAccs, n * sizeof(float));
     interrupts();
-
-    if (left != nullptr)
-    {
-        for (size_t i = n; i < count; ++i)
-        {
-            left[i] = 0.0f;
-        }
-    }
-    if (right != nullptr)
-    {
-        for (size_t i = n; i < count; ++i)
-        {
-            right[i] = 0.0f;
-        }
-    }
+    for (size_t i = n; i < count; ++i)
+        bins[i] = 0.0f;
 }

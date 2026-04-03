@@ -21,7 +21,7 @@ public:
     static float GetAvgPeriod();
     static float GetCpuLoad();
 private:
-    static int TimeFrameStart;
+    static uint32_t TimeFrameStart;
     static float TimeFramePeriod;
     static void ResetFrame();
     static void LapInner(uint8_t timerIndex);
