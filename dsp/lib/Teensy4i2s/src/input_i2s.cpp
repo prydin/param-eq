@@ -29,6 +29,7 @@
 #include "output_i2s.h"
 
 #define REQUIRED_STABLE_INTERVALS 10
+#define SAMPLE_RATE_COUNT_WINDOW_US 200000 // reduced from 1s to 200ms per request
 
 // set up two flip-flopped buffers, one is used for queueing up data for processing, the other receives data from I2S codec
 static int32_t dataL[AUDIO_BLOCK_SAMPLES*2] = {0};
@@ -40,12 +41,14 @@ static volatile uint8_t readyBufferIndex = 0;
 volatile uint32_t AudioInputI2S::interruptIntervalMicros = 1; // initialized to 1 to avoid division by zero on first read
 volatile uint32_t AudioInputI2S::numStableIntervals = 0;
 volatile uint32_t AudioInputI2S::lastTimeStamp = 0;
+static volatile uint32_t countWindowStartMicros = 0;
+static volatile uint32_t countWindowInterrupts = 0;
 
 // Common sample rates for rounding to the neastest standard rate
 uint32_t standardSampleRates[] {
 	8000, 11025, 12000, 16000, 22050, 24000,
 	32000, 44100, 48000, 88200, 96000, 176400,
-	192000, 384000
+	192000
 };
 
 DMAMEM __attribute__((aligned(32))) static uint64_t i2s_rx_buffer[AUDIO_BLOCK_SAMPLES*2];
@@ -90,15 +93,46 @@ int32_t** AudioInputI2S::getData()
 void AudioInputI2S::isr(void)
 {
 	uint32_t currentTime = micros();
-	uint32_t prev = interruptIntervalMicros;
- 	interruptIntervalMicros = currentTime - lastTimeStamp;
+	uint32_t rawInterval = currentTime - lastTimeStamp;
 	lastTimeStamp = currentTime;
-	if( abs((int32_t)interruptIntervalMicros - (int32_t)prev) < 100 ) {
-		if(numStableIntervals < REQUIRED_STABLE_INTERVALS) {
-			numStableIntervals++;
+
+	// Test estimator: count ISR events over a 1 second window.
+	// Each ISR handles AUDIO_BLOCK_SAMPLES frames, so:
+	// sampleRate ~= interruptsPerSecond * AUDIO_BLOCK_SAMPLES
+	if (rawInterval > 0 && rawInterval < 100000)
+	{
+		if (countWindowStartMicros == 0)
+		{
+			countWindowStartMicros = currentTime;
+			countWindowInterrupts = 0;
 		}
-	} else {
-		numStableIntervals = 0;
+
+		countWindowInterrupts++;
+
+		uint32_t elapsed = currentTime - countWindowStartMicros;
+		if (elapsed >= SAMPLE_RATE_COUNT_WINDOW_US)
+		{
+			uint32_t measuredRate = 0;
+			if (countWindowInterrupts > 0 && elapsed > 0)
+			{
+				uint64_t numerator = (uint64_t)countWindowInterrupts * (uint64_t)AUDIO_BLOCK_SAMPLES * 1000000ULL;
+				measuredRate = (uint32_t)((numerator + (elapsed / 2U)) / elapsed);
+			}
+
+			if (measuredRate > 0)
+			{
+				numStableIntervals = REQUIRED_STABLE_INTERVALS;
+				interruptIntervalMicros = (AUDIO_BLOCK_SAMPLES * 1000000U + (measuredRate / 2U)) / measuredRate;
+			}
+			else
+			{
+				numStableIntervals = 0;
+			}
+
+			// Start a fresh counting window.
+			countWindowStartMicros = currentTime;
+			countWindowInterrupts = 0;
+		}
 	}
 	
 	uint32_t daddr;

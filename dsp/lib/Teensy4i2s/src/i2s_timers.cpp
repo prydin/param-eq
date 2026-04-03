@@ -3,7 +3,7 @@
 float Timers::TimeAvg[Timers::TIMER_COUNT];
 float Timers::TimePeak[Timers::TIMER_COUNT];
 float Timers::TimeMax[Timers::TIMER_COUNT];
-int Timers::TimeFrameStart = 0;
+uint32_t Timers::TimeFrameStart = 0;
 float Timers::TimeFramePeriod = 1333.33f; // 64 sample blocks at 48khz
 
 void Timers::Lap(uint8_t timerIndex)
@@ -19,7 +19,9 @@ void Timers::LapInner(uint8_t timerIndex)
     if (timerIndex >= TIMER_COUNT)
         return;
 
-    int val = float(micros() - TimeFrameStart);
+    uint32_t now = micros();
+    uint32_t elapsedUs = now - TimeFrameStart;
+    float val = (float)elapsedUs;
     
     TimeAvg[timerIndex] = 0.995 * TimeAvg[timerIndex] + 0.005 * val;
     
@@ -72,7 +74,11 @@ float Timers::GetAvgPeriod()
 
 float Timers::GetCpuLoad()
 {
-    return Timers::TimePeak[Timers::TIMER_TOTAL] / TimeFramePeriod;
+    // Use averaged total-frame processing time for gating decisions.
+    // Peak is kept for diagnostics but can be dominated by sporadic ISR jitter.
+    if (TimeFramePeriod <= 0.0f)
+        return 0.0f;
+    return Timers::TimeAvg[Timers::TIMER_TOTAL] / TimeFramePeriod;
 }
 
 void Timers::ResetFrame()
@@ -83,7 +89,8 @@ void Timers::ResetFrame()
         return;
     }
 
-    int oldStart = TimeFrameStart;
+    uint32_t oldStart = TimeFrameStart;
     TimeFrameStart = micros();
-    TimeFramePeriod = 0.995f * TimeFramePeriod + 0.005f * (TimeFrameStart - oldStart);
+    uint32_t frameDeltaUs = TimeFrameStart - oldStart;
+    TimeFramePeriod = 0.995f * TimeFramePeriod + 0.005f * (float)frameDeltaUs;
 }

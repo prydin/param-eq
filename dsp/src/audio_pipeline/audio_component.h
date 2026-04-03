@@ -20,6 +20,7 @@
 // SOFTWARE.
 #ifndef AUDIO_COMPONENT_H
 #define AUDIO_COMPONENT_H
+#include <vector>
 #include <Teensy4i2s.h>
 #include <stdlib.h>
 #include "audio_buffer.h"
@@ -28,9 +29,21 @@
 
 class AudioComponent {
 public:
-    AudioComponent() {};
+    AudioComponent();
     ~AudioComponent() {};
     virtual void process(AudioBuffer* block) {};
+    void processMeasured(AudioBuffer* block);
+
+    float getProcessAverageMicros() const { return timingAvgMicros; }
+    float getProcessPeakMicros() const { return timingPeakMicros; }
+    uint32_t getProcessCallCount() const { return timingCalls; }
+    void resetProcessTiming();
+
+    void setTimingName(const char *name) { timingName = (name != nullptr) ? name : "AudioComponent"; }
+    const char *getTimingName() const { return timingName; }
+
+    static void printTimingReport();
+
     void addReceiver(AudioComponent* recipient) {
         outputs.push_back(recipient);
     }
@@ -48,6 +61,14 @@ protected:
     void transmit(AudioBuffer* block);
 
 private:
+    static std::vector<AudioComponent*>& registry();
+
+    // Timing stats (exclusive/self time, excluding downstream receiver processing).
+    float timingAvgMicros = 0.0f;
+    float timingPeakMicros = 0.0f;
+    uint32_t timingCalls = 0;
+    const char *timingName = "AudioComponent";
+
     std::vector<AudioComponent*> outputs;
 };
 #endif // AUDIO_COMPONENT_H

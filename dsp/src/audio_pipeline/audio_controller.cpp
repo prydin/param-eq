@@ -29,7 +29,8 @@ uint32_t AudioController::sampleRate;
 namespace
 {
 uint8_t g_inputShiftBits = 0;
-bool g_inputAlignmentLocked = false;
+// Always assume left-aligned input (no byte-shift). Disable runtime detection.
+bool g_inputAlignmentLocked = true;
 
 uint8_t detectInputShiftBits(int32_t **inputs)
 {
@@ -153,15 +154,7 @@ void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
         return;
     }
 
-    if (!g_inputAlignmentLocked)
-    {
-        g_inputShiftBits = detectInputShiftBits(inputs);
-        if (g_inputShiftBits != 0)
-        {
-            g_inputAlignmentLocked = true;
-            Serial.printf("Detected right-aligned PCM input, applying %u-bit left shift.\n", g_inputShiftBits);
-        }
-    }
+    // Alignment detection disabled: assume left-aligned input (g_inputShiftBits == 0).
 
     AudioBuffer* buffer = AudioBufferPool::getInstance().getBuffer();
     if (buffer == nullptr)
@@ -182,6 +175,7 @@ void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
             buffer->data[ch][i] = v;
         }
     }
+    //Serial.println(buffer->data[0][0]); // Debug: print first sample of block
     
     // Process through the pipeline - this modifies buffer and eventually calls back to process()
     getInstance()->transmit(buffer);
@@ -193,5 +187,16 @@ void AudioController::processAudio(int32_t **inputs, int32_t **outputs)
         }
     }
     getInstance()->release(buffer);
+}
+
+// Accessors for debug/status reporting
+uint8_t AudioController::getInputShiftBits()
+{
+    return g_inputShiftBits;
+}
+
+bool AudioController::isInputAlignmentLocked()
+{
+    return g_inputAlignmentLocked;
 }
  
