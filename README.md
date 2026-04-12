@@ -7,8 +7,10 @@ instrumentation, and UI experiments.
 What began as "just three EQ bands" now includes filter control, combined response visualization,
 VU metering, spectrum visualization, and a register-based control/data protocol between two MCUs.
 
-![UI](images/ui.png)
-![Hardware](images/ratsnest.png)
+![Spectrum](images/spectrum.jpg)
+![Filter design](images/filter.jpg)
+![Simple UI](images/simple.jpg)
+![Interior](images/innards.jpg)
 
 ## Project Story
 
