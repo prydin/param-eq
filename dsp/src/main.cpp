@@ -57,7 +57,7 @@
 #include "persistence.h"
 #include "display.h"
 
-//#define TESTMODE 1
+// #define TESTMODE 1
 
 #ifdef TESTMODE
 #include "audio_pipeline/test_tone.h"
